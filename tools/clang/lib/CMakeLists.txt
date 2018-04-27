@@ -22,6 +22,11 @@ if(CLANG_ENABLE_STATIC_ANALYZER)
   add_subdirectory(StaticAnalyzer)
 endif()
 add_subdirectory(Format)
+
+# HLSLFuzzer change starts
+add_subdirectory(HLSLFuzzer)
+# HLSLFuzzer change ends
+
 # SPIRV change starts
 if (ENABLE_SPIRV_CODEGEN)
   add_subdirectory(SPIRV)

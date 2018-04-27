@@ -158,6 +158,10 @@ public:
   bool IsRootSignatureProfile();
   bool IsLibraryProfile();
 
+  // HLSLFuzzer Starts
+  bool Transform;       //OPT_transform
+  // HLSLFuzzer Ends
+
   // SPIRV Change Starts
 #ifdef ENABLE_SPIRV_CODEGEN
   bool GenSPIRV;                           // OPT_spirv

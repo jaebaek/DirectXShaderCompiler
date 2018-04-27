@@ -195,6 +195,20 @@ IDxcCompiler2 : public IDxcCompiler {
     _Outptr_opt_result_z_ LPWSTR *ppDebugBlobName,// Suggested file name for debug blob.
     _COM_Outptr_opt_ IDxcBlob **ppDebugBlob       // Debug blob
   ) = 0;
+
+  // Transform source text
+  virtual HRESULT STDMETHODCALLTYPE Transform(
+    _In_ IDxcBlob *pSource,                       // Source text to transform
+    _In_opt_ LPCWSTR pSourceName,                 // Optional file name for pSource. Used in errors and include handlers.
+    _In_ LPCWSTR pEntryPoint,                     // Entry point name
+    _In_ LPCWSTR pTargetProfile,                  // Shader profile to compile
+    _In_count_(argCount) LPCWSTR *pArguments,     // Array of pointers to arguments
+    _In_ UINT32 argCount,                         // Number of arguments
+    _In_count_(defineCount) const DxcDefine *pDefines,  // Array of defines
+    _In_ UINT32 defineCount,                      // Number of defines
+    _In_opt_ IDxcIncludeHandler *pIncludeHandler, // user-provided interface to handle #include directives (optional)
+    _COM_Outptr_ IDxcOperationResult **ppResult   // Preprocessor output status, buffer, and errors
+  ) = 0;
 };
 
 struct __declspec(uuid("F1B5BE2A-62DD-4327-A1C2-42AC1E1E78E6"))
