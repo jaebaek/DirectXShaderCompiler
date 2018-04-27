@@ -4207,6 +4207,7 @@ public:
   }
 
   Designator *getDesignator(unsigned Idx) { return &designators_begin()[Idx]; }
+  const Designator *getDesignator(unsigned Idx) const { return &designators_begin()[Idx]; }
 
   void setDesignators(const ASTContext &C, const Designator *Desigs,
                       unsigned NumDesigs);

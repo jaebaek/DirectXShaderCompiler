@@ -158,6 +158,10 @@ public:
   bool IsRootSignatureProfile();
   bool IsLibraryProfile();
 
+  // Transform Starts
+  bool Transform; // OPT_transform
+  // Transform Ends
+
   // SPIRV Change Starts
 #ifdef ENABLE_SPIRV_CODEGEN
   bool GenSPIRV;                           // OPT_spirv

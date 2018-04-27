@@ -211,6 +211,7 @@ public:
   void Recompile(IDxcBlob *pSource, IDxcLibrary *pLibrary, IDxcCompiler *pCompiler, std::vector<LPCWSTR> &args, IDxcOperationResult **pCompileResult);
   int DumpBinary();
   void Preprocess();
+  void Transform();
   void GetCompilerVersionInfo(llvm::raw_string_ostream &OS);
 };
 
@@ -870,6 +871,54 @@ void DxcContext::Preprocess() {
   }
 }
 
+void DxcContext::Transform() {
+  DXASSERT(!m_Opts.Transform, "else option reading should have failed");
+  CComPtr<IDxcCompiler> pCompiler;
+  CComPtr<IDxcOperationResult> pPreprocessResult;
+  CComPtr<IDxcBlobEncoding> pSource;
+  std::vector<LPCWSTR> args;
+
+  CComPtr<IDxcLibrary> pLibrary;
+  CComPtr<IDxcIncludeHandler> pIncludeHandler;
+  IFT(CreateInstance(CLSID_DxcLibrary, &pLibrary));
+  IFT(pLibrary->CreateIncludeHandler(&pIncludeHandler));
+
+  // Carry forward the options that control preprocessor
+  if (m_Opts.LegacyMacroExpansion)
+    args.push_back(L"-flegacy-macro-expansion");
+
+  // Upgrade profile to 6.0 version from minimum recognized shader model
+  llvm::StringRef TargetProfile = m_Opts.TargetProfile;
+  const hlsl::ShaderModel *SM =
+      hlsl::ShaderModel::GetByName(m_Opts.TargetProfile.str().c_str());
+  if (SM->IsValid() && SM->GetMajor() < 6) {
+    TargetProfile = hlsl::ShaderModel::Get(SM->GetKind(), 6, 0)->GetName();
+  }
+
+  ReadFileIntoBlob(m_dxcSupport, StringRefUtf16(m_Opts.InputFile), &pSource);
+  IFT(CreateInstance(CLSID_DxcCompiler, &pCompiler));
+  CComPtr<IDxcCompiler2> pCompiler2;
+  IFT(pCompiler.QueryInterface(&pCompiler2));
+  IFT(pCompiler2->Transform(
+      pSource, StringRefUtf16(m_Opts.InputFile),
+      StringRefUtf16(m_Opts.EntryPoint), StringRefUtf16(TargetProfile),
+      args.data(), args.size(), m_Opts.Defines.data(), m_Opts.Defines.size(),
+      pIncludeHandler, &pPreprocessResult));
+  WriteOperationErrorsToConsole(pPreprocessResult, m_Opts.OutputWarnings);
+
+  HRESULT status;
+  IFT(pPreprocessResult->GetStatus(&status));
+  if (SUCCEEDED(status)) {
+    CComPtr<IDxcBlob> pProgram;
+    IFT(pPreprocessResult->GetResult(&pProgram));
+    pCompiler.Release();
+    pPreprocessResult.Release();
+    if (pProgram.p != nullptr) {
+      ActOnBlob(pProgram.p);
+    }
+  }
+}
+
 static void WriteString(HANDLE hFile, _In_z_ LPCSTR value, LPCWSTR pFileName) {
   DWORD written;
   if (FALSE == WriteFile(hFile, value, strlen(value) * sizeof(value[0]), &written, nullptr))
@@ -1134,8 +1183,10 @@ int __cdecl wmain(int argc, const wchar_t **argv_) {
     if (!dxcOpts.Preprocess.empty()) {
       pStage = "Preprocessing";
       context.Preprocess();
-    }
-    else if (dxcOpts.DumpBin) {
+    } else if (dxcOpts.Transform) {
+      pStage = "Transform";
+      context.Transform();
+    } else if (dxcOpts.DumpBin) {
       pStage = "Dumping existing binary";
       retVal = context.DumpBinary();
     }

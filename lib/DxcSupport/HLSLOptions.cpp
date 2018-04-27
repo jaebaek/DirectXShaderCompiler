@@ -480,6 +480,10 @@ int ReadDxcOpts(const OptTable *optionTable, unsigned flagsToInclude,
     return 1;
   }
 
+  // Transform Starts
+  opts.Transform = Args.hasFlag(OPT_transform, OPT_INVALID, false);
+  // Transform Ends
+
   // SPIRV Change Starts
 #ifdef ENABLE_SPIRV_CODEGEN
   const bool genSpirv = opts.GenSPIRV = Args.hasFlag(OPT_spirv, OPT_INVALID, false);

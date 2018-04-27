@@ -30,6 +30,8 @@
 #include "dxcutil.h"
 #include "dxc/Support/dxcfilesystem.h"
 
+#include "clang/Transform/TransFormAction.h"
+
 // SPIRV change starts
 #ifdef ENABLE_SPIRV_CODEGEN
 #include "clang/SPIRV/EmitSPIRVAction.h"
@@ -52,6 +54,8 @@
 #include "dxcetw.h"
 #include "dxillib.h"
 #include <algorithm>
+
+#include <iostream>
 
 #define CP_UTF16 1200
 
@@ -595,6 +599,134 @@ public:
     }
   Cleanup:
     DxcEtw_DXCompilerCompile_Stop(hr);
+    return hr;
+  }
+
+  // Transform source text
+  HRESULT STDMETHODCALLTYPE Transform(
+      _In_ IDxcBlob *pSource,       // Source text to transform
+      _In_opt_ LPCWSTR pSourceName, // Optional file name for pSource. Used in
+                                    // errors and include handlers.
+      _In_ LPCWSTR pEntryPoint,     // Entry point name
+      _In_ LPCWSTR pTargetProfile,  // Shader profile to compile
+      _In_count_(argCount)
+          LPCWSTR *pArguments, // Array of pointers to arguments
+      _In_ UINT32 argCount,    // Number of arguments
+      _In_count_(defineCount) const DxcDefine *pDefines, // Array of defines
+      _In_ UINT32 defineCount,                           // Number of defines
+      _In_opt_ IDxcIncludeHandler *pIncludeHandler, // user-provided interface
+                                                    // to handle #include
+                                                    // directives (optional)
+      _COM_Outptr_ IDxcOperationResult *
+          *ppResult // Preprocessor output status, buffer, and errors
+      ) override {
+    if (pSource == nullptr || ppResult == nullptr ||
+        (defineCount > 0 && pDefines == nullptr) ||
+        (argCount > 0 && pArguments == nullptr) || pEntryPoint == nullptr ||
+        pTargetProfile == nullptr)
+      return E_INVALIDARG;
+    *ppResult = nullptr;
+
+    HRESULT hr = S_OK;
+    DxcThreadMalloc TM(m_pMalloc);
+    CComPtr<IDxcBlobEncoding> utf8Source;
+    IFC(hlsl::DxcGetBlobAsUtf8(pSource, &utf8Source));
+
+    try {
+      CComPtr<AbstractMemoryStream> pOutputStream;
+      CComPtr<IDxcBlob> pOutputBlob;
+      dxcutil::DxcArgsFileSystem *msfPtr = dxcutil::CreateDxcArgsFileSystem(
+          utf8Source, pSourceName, pIncludeHandler);
+      std::unique_ptr<::llvm::sys::fs::MSFileSystem> msf(msfPtr);
+
+      ::llvm::sys::fs::AutoPerThreadSystem pts(msf.get());
+      IFTLLVM(pts.error_code());
+
+      IFT(CreateMemoryStream(m_pMalloc, &pOutputStream));
+      IFT(pOutputStream.QueryInterface(&pOutputBlob));
+
+      const llvm::opt::OptTable *table = ::options::getHlslOptTable();
+      int argCountInt;
+      IFT(UIntToInt(argCount, &argCountInt));
+      hlsl::options::MainArgs mainArgs(argCountInt, pArguments, 0);
+      hlsl::options::DxcOpts opts;
+      CW2A pUtf8TargetProfile(pTargetProfile, CP_UTF8);
+      // Set target profile before reading options and validate
+      opts.TargetProfile = pUtf8TargetProfile.m_psz;
+      bool finished;
+      ReadOptsAndValidate(mainArgs, opts, pOutputStream, ppResult, finished);
+      if (finished) {
+        hr = S_OK;
+        goto Cleanup;
+      }
+
+      // Prepare UTF8-encoded versions of API values.
+      CW2A pUtf8EntryPoint(pEntryPoint, CP_UTF8);
+      CW2A utf8SourceName(pSourceName, CP_UTF8);
+      const char *pUtf8SourceName = utf8SourceName.m_psz;
+      if (pUtf8SourceName == nullptr) {
+        if (opts.InputFile.empty()) {
+          pUtf8SourceName = "input.hlsl";
+        } else {
+          pUtf8SourceName = opts.InputFile.data();
+        }
+      }
+
+      IFT(msfPtr->RegisterOutputStream(L"output.hlsl", pOutputStream));
+      IFT(msfPtr->CreateStdStreams(m_pMalloc));
+
+      StringRef Data((LPSTR)utf8Source->GetBufferPointer(),
+                     utf8Source->GetBufferSize());
+      std::unique_ptr<llvm::MemoryBuffer> pBuffer(
+          llvm::MemoryBuffer::getMemBufferCopy(Data, pUtf8SourceName));
+
+      // Not very efficient but also not very important.
+      std::vector<std::string> defines;
+      CreateDefineStrings(pDefines, defineCount, defines);
+
+      // Setup a compiler instance.
+      std::string warnings;
+      raw_string_ostream w(warnings);
+      raw_stream_ostream outStream(pOutputStream.p);
+      CompilerInstance compiler;
+      std::unique_ptr<TextDiagnosticPrinter> diagPrinter =
+          std::make_unique<TextDiagnosticPrinter>(
+              w, &compiler.getDiagnosticOpts());
+      SetupCompilerForCompile(compiler, &m_langExtensionsHelper, utf8SourceName,
+                              diagPrinter.get(), defines, opts, pArguments,
+                              argCount);
+      msfPtr->SetupForCompilerInstance(compiler);
+
+      // The clang entry point (cc1_main) would now create a compiler invocation
+      // from arguments, but for this path we're exclusively trying to preproces
+      // to text.
+      compiler.getFrontendOpts().OutputFile = "output.hlsl";
+      compiler.WriteDefaultOutputDirectly = true;
+      compiler.setOutStream(&outStream);
+
+      compiler.getLangOpts().HLSLEntryFunction =
+          compiler.getCodeGenOpts().HLSLEntryFunction = pUtf8EntryPoint.m_psz;
+      compiler.getLangOpts().HLSLProfile =
+          compiler.getCodeGenOpts().HLSLProfile = pUtf8TargetProfile.m_psz;
+
+      FrontendInputFile file(utf8SourceName.m_psz, IK_HLSL);
+      TransFormAction action("simplify-if", 1);
+      if (action.BeginSourceFile(compiler, file)) {
+        action.Execute();
+        action.EndSourceFile();
+      }
+      outStream.flush();
+
+      // Add std err to warnings.
+      msfPtr->WriteStdErrToStream(w);
+
+      CreateOperationResultFromOutputs(pOutputBlob, msfPtr, warnings,
+                                       compiler.getDiagnostics(), ppResult);
+
+      hr = S_OK;
+    }
+    CATCH_CPP_ASSIGN_HRESULT();
+  Cleanup:
     return hr;
   }
 

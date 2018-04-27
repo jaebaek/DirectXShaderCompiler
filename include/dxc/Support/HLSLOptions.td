@@ -67,6 +67,8 @@ def hlsloptz_Group : OptionGroup<"HLSL Optimization">, HelpText<"Optimization Op
 def hlslutil_Group : OptionGroup<"HLSL Utility">, HelpText<"Utility Options">;
 def hlslcore_Group : OptionGroup<"HLSL Core">, HelpText<"Common Options">;
 
+def transform_Group : OptionGroup<"Transform">, HelpText<"HLSL Code Transformation">; // Transform Change
+
 def spirv_Group : OptionGroup<"SPIR-V CodeGen">, HelpText<"SPIR-V CodeGen Options">; // SPIRV Change
 
 //////////////////////////////////////////////////////////////////////////////
@@ -232,6 +234,11 @@ def rootsig_define : Separate<["-", "/"], "rootsig-define">, Group<hlslcomp_Grou
 def enable_16bit_types: Flag<["-", "/"], "enable-16bit-types">, Flags<[CoreOption, DriverOption]>, Group<hlslcomp_Group>,
   HelpText<"Enable 16bit types and disable min precision types. Available in HLSL 2018 and shader model 6.2">;
 def ignore_line_directives : Flag<["-", "/"], "ignore-line-directives">, HelpText<"Ignore line directives">, Flags<[CoreOption]>, Group<hlslcomp_Group>;
+
+// Transform Starts
+def transform : Flag<["-"], "transform">, Group<transform_Group>, Flags<[CoreOption, DriverOption]>,
+  HelpText<"Transform HLSL code">;
+// Transform Ends
 
 // SPIRV Change Starts
 def spirv : Flag<["-"], "spirv">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,

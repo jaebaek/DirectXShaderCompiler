@@ -87,6 +87,7 @@ set(GENERATED_HEADERS
 
 add_clang_library(dxcompiler SHARED ${SOURCES})
 target_link_libraries(dxcompiler PRIVATE ${LIBRARIES} ${DIASDK_LIBRARIES})
+target_link_libraries(dxcompiler PRIVATE clangTransform)
 # SPIRV change starts
 if (ENABLE_SPIRV_CODEGEN)
   target_link_libraries(dxcompiler PRIVATE clangSPIRV)
