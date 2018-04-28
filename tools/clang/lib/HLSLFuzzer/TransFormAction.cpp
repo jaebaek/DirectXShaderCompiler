@@ -40,7 +40,6 @@
 // This code is in the public domain
 //------------------------------------------------------------------------------
 
-
 using namespace clang;
 
 // By implementing RecursiveASTVisitor, we can specify which AST nodes
@@ -56,12 +55,12 @@ public:
       Stmt *Then = IfStatement->getThen();
 
       rewriter.InsertText(Then->getLocStart(), "// the 'if' part\n", true,
-                             true);
+                          true);
 
       Stmt *Else = IfStatement->getElse();
       if (Else)
-        rewriter.InsertText(Else->getLocStart(), "// the 'else' part\n",
-                               true, true);
+        rewriter.InsertText(Else->getLocStart(), "// the 'else' part\n", true,
+                            true);
     }
 
     return true;
@@ -122,7 +121,8 @@ private:
 
 namespace clang {
 
-std::unique_ptr<ASTConsumer> TransFormAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
+std::unique_ptr<ASTConsumer>
+TransFormAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   rewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
   outStream = CI.getOutStream();
   return llvm::make_unique<TransformASTConsumer>(rewriter);

@@ -159,10 +159,10 @@ public:
   bool IsLibraryProfile();
 
   // HLSLFuzzer Starts
-  bool Transform;       //OPT_transform
-  // HLSLFuzzer Ends
+  bool Transform; // OPT_transform
+// HLSLFuzzer Ends
 
-  // SPIRV Change Starts
+// SPIRV Change Starts
 #ifdef ENABLE_SPIRV_CODEGEN
   bool GenSPIRV;                           // OPT_spirv
   bool VkInvertY;                          // OPT_fvk_invert_y

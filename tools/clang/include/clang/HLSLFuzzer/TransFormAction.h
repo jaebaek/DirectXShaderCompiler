@@ -19,9 +19,10 @@ protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
   void EndSourceFileAction() override;
+
 private:
   Rewriter rewriter;
-  llvm::raw_ostream* outStream;
+  llvm::raw_ostream *outStream;
 };
 
 } // end namespace clang

@@ -482,9 +482,9 @@ int ReadDxcOpts(const OptTable *optionTable, unsigned flagsToInclude,
 
   // HLSLFuzzer Starts
   opts.Transform = Args.hasFlag(OPT_transform, OPT_INVALID, false);
-  // HLSLFuzzer Ends
+// HLSLFuzzer Ends
 
-  // SPIRV Change Starts
+// SPIRV Change Starts
 #ifdef ENABLE_SPIRV_CODEGEN
   const bool genSpirv = opts.GenSPIRV = Args.hasFlag(OPT_spirv, OPT_INVALID, false);
   opts.VkInvertY = Args.hasFlag(OPT_fvk_invert_y, OPT_INVALID, false);

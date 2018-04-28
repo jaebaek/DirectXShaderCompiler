@@ -604,17 +604,22 @@ public:
 
   // Transform source text
   HRESULT STDMETHODCALLTYPE Transform(
-    _In_ IDxcBlob *pSource,                       // Source text to transform
-    _In_opt_ LPCWSTR pSourceName,                 // Optional file name for pSource. Used in errors and include handlers.
-    _In_ LPCWSTR pEntryPoint,                     // Entry point name
-    _In_ LPCWSTR pTargetProfile,                  // Shader profile to compile
-    _In_count_(argCount) LPCWSTR *pArguments,     // Array of pointers to arguments
-    _In_ UINT32 argCount,                         // Number of arguments
-    _In_count_(defineCount) const DxcDefine *pDefines,  // Array of defines
-    _In_ UINT32 defineCount,                      // Number of defines
-    _In_opt_ IDxcIncludeHandler *pIncludeHandler, // user-provided interface to handle #include directives (optional)
-    _COM_Outptr_ IDxcOperationResult **ppResult   // Preprocessor output status, buffer, and errors
-    ) override {
+      _In_ IDxcBlob *pSource,       // Source text to transform
+      _In_opt_ LPCWSTR pSourceName, // Optional file name for pSource. Used in
+                                    // errors and include handlers.
+      _In_ LPCWSTR pEntryPoint,     // Entry point name
+      _In_ LPCWSTR pTargetProfile,  // Shader profile to compile
+      _In_count_(argCount)
+          LPCWSTR *pArguments, // Array of pointers to arguments
+      _In_ UINT32 argCount,    // Number of arguments
+      _In_count_(defineCount) const DxcDefine *pDefines, // Array of defines
+      _In_ UINT32 defineCount,                           // Number of defines
+      _In_opt_ IDxcIncludeHandler *pIncludeHandler, // user-provided interface
+                                                    // to handle #include
+                                                    // directives (optional)
+      _COM_Outptr_ IDxcOperationResult *
+          *ppResult // Preprocessor output status, buffer, and errors
+      ) override {
     if (pSource == nullptr || ppResult == nullptr ||
         (defineCount > 0 && pDefines == nullptr) ||
         (argCount > 0 && pArguments == nullptr) || pEntryPoint == nullptr ||
@@ -630,7 +635,8 @@ public:
     try {
       CComPtr<AbstractMemoryStream> pOutputStream;
       CComPtr<IDxcBlob> pOutputBlob;
-      dxcutil::DxcArgsFileSystem *msfPtr = dxcutil::CreateDxcArgsFileSystem(utf8Source, pSourceName, pIncludeHandler);
+      dxcutil::DxcArgsFileSystem *msfPtr = dxcutil::CreateDxcArgsFileSystem(
+          utf8Source, pSourceName, pIncludeHandler);
       std::unique_ptr<::llvm::sys::fs::MSFileSystem> msf(msfPtr);
 
       ::llvm::sys::fs::AutoPerThreadSystem pts(msf.get());
@@ -661,8 +667,7 @@ public:
       if (pUtf8SourceName == nullptr) {
         if (opts.InputFile.empty()) {
           pUtf8SourceName = "input.hlsl";
-        }
-        else {
+        } else {
           pUtf8SourceName = opts.InputFile.data();
         }
       }
@@ -671,9 +676,9 @@ public:
       IFT(msfPtr->CreateStdStreams(m_pMalloc));
 
       StringRef Data((LPSTR)utf8Source->GetBufferPointer(),
-        utf8Source->GetBufferSize());
+                     utf8Source->GetBufferSize());
       std::unique_ptr<llvm::MemoryBuffer> pBuffer(
-        llvm::MemoryBuffer::getMemBufferCopy(Data, pUtf8SourceName));
+          llvm::MemoryBuffer::getMemBufferCopy(Data, pUtf8SourceName));
 
       // Not very efficient but also not very important.
       std::vector<std::string> defines;
@@ -685,8 +690,11 @@ public:
       raw_stream_ostream outStream(pOutputStream.p);
       CompilerInstance compiler;
       std::unique_ptr<TextDiagnosticPrinter> diagPrinter =
-          std::make_unique<TextDiagnosticPrinter>(w, &compiler.getDiagnosticOpts());
-      SetupCompilerForCompile(compiler, &m_langExtensionsHelper, utf8SourceName, diagPrinter.get(), defines, opts, pArguments, argCount);
+          std::make_unique<TextDiagnosticPrinter>(
+              w, &compiler.getDiagnosticOpts());
+      SetupCompilerForCompile(compiler, &m_langExtensionsHelper, utf8SourceName,
+                              diagPrinter.get(), defines, opts, pArguments,
+                              argCount);
       msfPtr->SetupForCompilerInstance(compiler);
 
       // The clang entry point (cc1_main) would now create a compiler invocation
@@ -697,9 +705,9 @@ public:
       compiler.setOutStream(&outStream);
 
       compiler.getLangOpts().HLSLEntryFunction =
-      compiler.getCodeGenOpts().HLSLEntryFunction = pUtf8EntryPoint.m_psz;
+          compiler.getCodeGenOpts().HLSLEntryFunction = pUtf8EntryPoint.m_psz;
       compiler.getLangOpts().HLSLProfile =
-      compiler.getCodeGenOpts().HLSLProfile = pUtf8TargetProfile.m_psz;
+          compiler.getCodeGenOpts().HLSLProfile = pUtf8TargetProfile.m_psz;
 
       FrontendInputFile file(utf8SourceName.m_psz, IK_HLSL);
       TransFormAction action;

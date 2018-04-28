@@ -889,7 +889,8 @@ void DxcContext::Transform() {
 
   // Upgrade profile to 6.0 version from minimum recognized shader model
   llvm::StringRef TargetProfile = m_Opts.TargetProfile;
-  const hlsl::ShaderModel *SM = hlsl::ShaderModel::GetByName(m_Opts.TargetProfile.str().c_str());
+  const hlsl::ShaderModel *SM =
+      hlsl::ShaderModel::GetByName(m_Opts.TargetProfile.str().c_str());
   if (SM->IsValid() && SM->GetMajor() < 6) {
     TargetProfile = hlsl::ShaderModel::Get(SM->GetKind(), 6, 0)->GetName();
   }
@@ -898,10 +899,11 @@ void DxcContext::Transform() {
   IFT(CreateInstance(CLSID_DxcCompiler, &pCompiler));
   CComPtr<IDxcCompiler2> pCompiler2;
   IFT(pCompiler.QueryInterface(&pCompiler2));
-  IFT(pCompiler2->Transform(pSource, StringRefUtf16(m_Opts.InputFile),
+  IFT(pCompiler2->Transform(
+      pSource, StringRefUtf16(m_Opts.InputFile),
       StringRefUtf16(m_Opts.EntryPoint), StringRefUtf16(TargetProfile),
-      args.data(), args.size(), m_Opts.Defines.data(),
-      m_Opts.Defines.size(), pIncludeHandler, &pPreprocessResult));
+      args.data(), args.size(), m_Opts.Defines.data(), m_Opts.Defines.size(),
+      pIncludeHandler, &pPreprocessResult));
   WriteOperationErrorsToConsole(pPreprocessResult, m_Opts.OutputWarnings);
 
   HRESULT status;
@@ -1181,12 +1183,10 @@ int __cdecl wmain(int argc, const wchar_t **argv_) {
     if (!dxcOpts.Preprocess.empty()) {
       pStage = "Preprocessing";
       context.Preprocess();
-    }
-    else if (dxcOpts.Transform) {
+    } else if (dxcOpts.Transform) {
       pStage = "Transform";
       context.Transform();
-    }
-    else if (dxcOpts.DumpBin) {
+    } else if (dxcOpts.DumpBin) {
       pStage = "Dumping existing binary";
       retVal = context.DumpBinary();
     }
