@@ -113,7 +113,7 @@ set(GENERATED_HEADERS
   ClangStmtNodes
   )
 
-add_clang_library(dxcompiler SHARED ${SOURCES})
+add_clang_library(dxcompiler STATIC ${SOURCES})
 add_dependencies(dxcompiler TablegenHLSLOptions) 
 if (WIN32)
   # No DxcEtw on non-Windows platforms.
