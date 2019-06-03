@@ -1,0 +1,56 @@
+#!amber
+
+SHADER compute kComputeShader HLSL
+AppendStructuredBuffer<float> append_buf;
+void main() {
+  int sum = 0;
+  int i = 0;
+  while (i < 100) {
+    sum += i;
+    ++i;
+  }
+  append_buf.Append(sum);
+
+  sum = 0;
+  i = 0;
+  while (i < 100) {
+    if (i > 50) break;
+    sum += i;
+    ++i;
+  }
+  append_buf.Append(sum);
+
+  sum = 0;
+  i = 0;
+  while (i < 100) {
+    if (i % 3) {
+      ++i;
+      continue;
+    }
+    sum += i;
+    ++i;
+  }
+  append_buf.Append(sum);
+
+  i = 33;
+  while (i < 71) {
+    sum += i;
+    ++i;
+  }
+  append_buf.Append(sum);
+}
+END
+
+BUFFER kAppendBuffer DATA_TYPE float SIZE 32 FILL 0
+BUFFER kAppendBufferIndex DATA_TYPE uint32 SIZE 4 FILL 0
+
+PIPELINE compute kComputePipeline
+  ATTACH kComputeShader
+
+  BIND BUFFER kAppendBuffer AS storage DESCRIPTOR_SET 0 BINDING 0
+  BIND BUFFER kAppendBufferIndex AS storage DESCRIPTOR_SET 0 BINDING 1
+END
+
+RUN kComputePipeline 1 1 1
+
+EXPECT kAppendBuffer IDX 0 TOLERANCE 0.01% EQ 4950 1275 1683 3640

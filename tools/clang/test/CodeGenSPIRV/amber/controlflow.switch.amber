@@ -1,0 +1,46 @@
+#!amber
+
+SHADER compute kComputeShader HLSL
+AppendStructuredBuffer<uint> append_buf;
+
+void test_switch(int i) {
+  switch (i) {
+    case 63:
+      append_buf.Append(9);
+      break;
+    case 23:
+      append_buf.Append(12);
+      break;
+    case 53:
+      append_buf.Append(15);
+    case 43:
+      append_buf.Append(17);
+      break;
+    case 83:
+      append_buf.Append(20);
+      break;
+    default:
+      append_buf.Append(23);
+  }
+}
+
+void main() {
+  for (int i = 13; i < 90; i += 10) {
+    test_switch(i);
+  }
+}
+END
+
+BUFFER kAppendBuffer DATA_TYPE uint32 SIZE 32 FILL 0
+BUFFER kAppendBufferIndex DATA_TYPE uint32 SIZE 4 FILL 0
+
+PIPELINE compute kComputePipeline
+  ATTACH kComputeShader
+
+  BIND BUFFER kAppendBuffer AS storage DESCRIPTOR_SET 0 BINDING 0
+  BIND BUFFER kAppendBufferIndex AS storage DESCRIPTOR_SET 0 BINDING 1
+END
+
+RUN kComputePipeline 1 1 1
+
+EXPECT kAppendBuffer IDX 0 TOLERANCE 0.01% EQ 23 12 23 17 15 17 9 23 20

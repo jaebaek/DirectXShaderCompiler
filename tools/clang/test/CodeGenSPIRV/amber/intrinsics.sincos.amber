@@ -1,0 +1,29 @@
+#!amber
+
+SHADER compute kComputeShader HLSL
+AppendStructuredBuffer<float4> buf;
+
+void main() {
+  float s = 0;
+  float c = 0;
+  sincos(1.0f, s, c);
+  buf.Append(float4(s, c, sin(2.0f), cos(3.0f)));
+}
+END
+
+BUFFER kComputeBuffer DATA_TYPE vec4<float> SIZE 16 FILL 0
+BUFFER kComputeBufferIndex DATA_TYPE uint32 SIZE 4 FILL 0
+
+PIPELINE compute kComputePipeline
+  ATTACH kComputeShader
+  BIND BUFFER kComputeBuffer AS storage DESCRIPTOR_SET 0 BINDING 0
+  BIND BUFFER kComputeBufferIndex AS storage DESCRIPTOR_SET 0 BINDING 1
+END
+
+RUN kComputePipeline 1 1 1
+
+# sin(1.0f) = 0.84147098
+# cos(1.0f) = 0.54030231
+# sin(2.0f) = 0.90929743
+# cos(3.0f) = -0.9899925
+EXPECT kComputeBuffer IDX 0 TOLERANCE 0.01% EQ 0.8415 0.5403 0.9093 -0.99

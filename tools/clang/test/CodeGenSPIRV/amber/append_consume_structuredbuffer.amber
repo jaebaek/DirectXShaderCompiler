@@ -1,0 +1,143 @@
+#!amber
+
+SHADER compute kComputeShader HLSL
+struct struct_with_bool {
+  bool2 elem_v2bool;
+  int2 elem_v2int;
+  float2 elem_v2float;
+  bool elem_bool;
+  int elem_int;
+  float elem_float;
+};
+
+ConsumeStructuredBuffer<bool2> consume_v2bool;
+ConsumeStructuredBuffer<float2> consume_v2float;
+ConsumeStructuredBuffer<int2> consume_v2int;
+ConsumeStructuredBuffer<struct_with_bool> consume_struct_with_bool;
+
+ConsumeStructuredBuffer<bool> consume_bool;
+ConsumeStructuredBuffer<float> consume_float;
+ConsumeStructuredBuffer<int> consume_int;
+
+AppendStructuredBuffer<bool2> append_v2bool;
+AppendStructuredBuffer<float2> append_v2float;
+AppendStructuredBuffer<int2> append_v2int;
+AppendStructuredBuffer<struct_with_bool> append_struct_with_bool;
+
+AppendStructuredBuffer<bool> append_bool;
+AppendStructuredBuffer<float> append_float;
+AppendStructuredBuffer<int> append_int;
+
+RWStructuredBuffer<bool> rw_bool;
+RWStructuredBuffer<bool2> rw_v2bool;
+
+ConsumeStructuredBuffer<float2x2> consume_float2x2;
+AppendStructuredBuffer<float4> append_v4float;
+
+void main() {
+  append_bool.Append(consume_bool.Consume());
+  append_bool.Append(consume_int.Consume());
+  append_bool.Append(consume_float.Consume());
+
+  append_bool.Append(consume_struct_with_bool.Consume().elem_bool);
+  append_bool.Append(consume_struct_with_bool.Consume().elem_int);
+  append_bool.Append(consume_struct_with_bool.Consume().elem_float);
+
+  append_int.Append(consume_bool.Consume());
+  append_int.Append(consume_int.Consume());
+  append_int.Append(consume_float.Consume());
+
+  append_int.Append(consume_struct_with_bool.Consume().elem_bool);
+  append_int.Append(consume_struct_with_bool.Consume().elem_int);
+  append_int.Append(consume_struct_with_bool.Consume().elem_float);
+
+  append_float.Append(consume_bool.Consume());
+  append_float.Append(consume_int.Consume());
+  append_float.Append(consume_float.Consume());
+
+  append_float.Append(consume_struct_with_bool.Consume().elem_bool);
+  append_float.Append(consume_struct_with_bool.Consume().elem_int);
+  append_float.Append(consume_struct_with_bool.Consume().elem_float);
+
+  append_v2bool.Append(consume_v2bool.Consume());
+  append_v2bool.Append(consume_v2int.Consume());
+  append_v2bool.Append(consume_v2float.Consume());
+
+  append_v2bool.Append(consume_struct_with_bool.Consume().elem_v2bool);
+  append_v2bool.Append(consume_struct_with_bool.Consume().elem_v2int);
+  append_v2bool.Append(consume_struct_with_bool.Consume().elem_v2float);
+
+  append_v2int.Append(consume_v2bool.Consume());
+  append_v2int.Append(consume_v2int.Consume());
+  append_v2int.Append(consume_v2float.Consume());
+
+  append_v2int.Append(consume_struct_with_bool.Consume().elem_v2bool);
+  append_v2int.Append(consume_struct_with_bool.Consume().elem_v2int);
+  append_v2int.Append(consume_struct_with_bool.Consume().elem_v2float);
+
+  append_v2float.Append(consume_v2bool.Consume());
+  append_v2float.Append(consume_v2int.Consume());
+  append_v2float.Append(consume_v2float.Consume());
+
+  append_v2float.Append(consume_struct_with_bool.Consume().elem_v2bool);
+  append_v2float.Append(consume_struct_with_bool.Consume().elem_v2int);
+  append_v2float.Append(consume_struct_with_bool.Consume().elem_v2float);
+
+  append_bool.Append(consume_v2bool.Consume().x);
+  append_bool.Append(consume_v2int.Consume().x);
+  append_bool.Append(consume_v2float.Consume().x);
+
+  append_bool.Append(consume_struct_with_bool.Consume().elem_v2bool.x);
+  append_bool.Append(consume_struct_with_bool.Consume().elem_v2int.x);
+  append_bool.Append(consume_struct_with_bool.Consume().elem_v2float.x);
+
+  append_int.Append(consume_v2bool.Consume().x);
+  append_int.Append(consume_v2int.Consume().x);
+  append_int.Append(consume_v2float.Consume().x);
+
+  append_int.Append(consume_struct_with_bool.Consume().elem_v2bool.x);
+  append_int.Append(consume_struct_with_bool.Consume().elem_v2int.x);
+  append_int.Append(consume_struct_with_bool.Consume().elem_v2float.x);
+
+  append_float.Append(consume_v2bool.Consume().x);
+  append_float.Append(consume_v2int.Consume().x);
+  append_float.Append(consume_v2float.Consume().x);
+
+  append_float.Append(consume_struct_with_bool.Consume().elem_v2bool.x);
+  append_float.Append(consume_struct_with_bool.Consume().elem_v2int.x);
+  append_float.Append(consume_struct_with_bool.Consume().elem_v2float.x);
+
+  append_bool.Append(rw_bool[0]);
+  append_bool.Append(rw_v2bool[0].x);
+  append_int.Append(rw_bool[0]);
+  append_int.Append(rw_v2bool[0].x);
+  append_float.Append(rw_bool[0]);
+  append_float.Append(rw_v2bool[0].x);
+  append_v4float.Append(consume_float2x2.Consume());
+}
+END
+
+BUFFER kConsumeBuffer DATA_TYPE float DATA
+4.0 19.0
+END
+BUFFER kConsumeBufferIndex DATA_TYPE uint32 DATA
+2
+END
+
+BUFFER kAppendBuffer DATA_TYPE float SIZE 32 FILL 0
+BUFFER kAppendBufferIndex DATA_TYPE uint32 SIZE 4 FILL 0
+
+PIPELINE compute kComputePipeline
+  ATTACH kComputeShader
+
+  BIND BUFFER kConsumeBuffer AS storage DESCRIPTOR_SET 0 BINDING 0
+  BIND BUFFER kConsumeBufferIndex AS storage DESCRIPTOR_SET 0 BINDING 1
+
+  BIND BUFFER kAppendBuffer AS storage DESCRIPTOR_SET 0 BINDING 2
+  BIND BUFFER kAppendBufferIndex AS storage DESCRIPTOR_SET 0 BINDING 3
+END
+
+RUN kComputePipeline 1 1 1
+
+EXPECT kAppendBuffer IDX 0 TOLERANCE 0.01% EQ 23.0 15.0  76.0 4.75 \
+                                              66.0 140.0 70.0 5.923
