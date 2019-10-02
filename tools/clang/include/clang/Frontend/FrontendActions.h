@@ -187,7 +187,10 @@ protected:
   bool BeginSourceFileAction(CompilerInstance &CI,
                              StringRef Filename) override;
 
+#if 0 // HLSL Change Starts - no support for AST serialization
   void ExecuteAction() override;
+#endif // HLSL Change Ends - no support for AST serialization
+
   void EndSourceFileAction() override;
 
 public:

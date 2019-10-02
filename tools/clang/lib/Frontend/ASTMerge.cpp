@@ -33,6 +33,8 @@ bool ASTMergeAction::BeginSourceFileAction(CompilerInstance &CI,
   return AdaptedAction->BeginSourceFileAction(CI, Filename);
 }
 
+#if 0 // HLSL Change Starts - no support for AST serialization
+
 void ASTMergeAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
   CI.getDiagnostics().getClient()->BeginSourceFile(
@@ -81,6 +83,8 @@ void ASTMergeAction::ExecuteAction() {
   AdaptedAction->ExecuteAction();
   CI.getDiagnostics().getClient()->EndSourceFile();
 }
+
+#endif // HLSL Change Ends - no support for AST serialization
 
 void ASTMergeAction::EndSourceFileAction() {
   return AdaptedAction->EndSourceFileAction();
