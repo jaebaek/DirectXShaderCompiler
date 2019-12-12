@@ -634,6 +634,18 @@ DeclResultIdMapper::createFnVar(const VarDecl *var,
   assert(astDecls[var].instr == nullptr);
   astDecls[var].instr = varInstr;
 
+  if (spirvOptions.debugInfoRich) {
+    // Add DebugLocalVariable information
+    uint32_t line = astContext.getSourceManager().getPresumedLineNumber(loc);
+    uint32_t column =
+        astContext.getSourceManager().getPresumedColumnNumber(loc);
+    // TODO: replace this with FlagIsLocal enum.
+    uint32_t flags = 1 << 2;
+    auto *debugLocalVar = spvBuilder.createDebugLocalVariable(
+        type, name, theEmitter.getRichDebugInfo().source, line, column,
+        theEmitter.getRichDebugInfo().scopeStack.back(), flags);
+  }
+
   return varInstr;
 }
 
@@ -756,7 +768,7 @@ SpirvVariable *DeclResultIdMapper::createStructOrStructArrayVarOfExplicitLayout(
   llvm::SmallVector<HybridStructType::FieldInfo, 4> fields;
   for (const auto *subDecl : declGroup) {
     // 'groupshared' variables should not be placed in $Globals cbuffer.
-    if(forGlobals && subDecl->hasAttr<HLSLGroupSharedAttr>())
+    if (forGlobals && subDecl->hasAttr<HLSLGroupSharedAttr>())
       continue;
 
     // The field can only be FieldDecl (for normal structs) or VarDecl (for
@@ -981,7 +993,7 @@ void DeclResultIdMapper::createGlobalsCBuffer(const VarDecl *var) {
   uint32_t index = 0;
   for (const auto *decl : collectDeclsInDeclContext(context)) {
     // 'groupshared' variables should not be placed in $Globals cbuffer.
-    if(decl->hasAttr<HLSLGroupSharedAttr>())
+    if (decl->hasAttr<HLSLGroupSharedAttr>())
       continue;
     if (const auto *varDecl = dyn_cast<VarDecl>(decl)) {
       if (!spirvOptions.noWarnIgnoredFeatures) {
