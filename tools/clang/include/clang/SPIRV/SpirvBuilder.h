@@ -660,7 +660,7 @@ SpirvBuilder::setDebugSource(uint32_t major, uint32_t minor,
     SpirvSource *debugSource = new (context)
         SpirvSource(/*SourceLocation*/ {}, spv::SourceLanguage::HLSL, version,
                     fileString, content);
-    module->addDebugSource(debugSource);
+    module->addSource(debugSource);
     if (!mainSource)
       mainSource = debugSource;
   }
@@ -671,7 +671,7 @@ SpirvBuilder::setDebugSource(uint32_t major, uint32_t minor,
     mainSource = new (context)
         SpirvSource(/*SourceLocation*/ {}, spv::SourceLanguage::HLSL, version,
                     nullptr, content);
-    module->addDebugSource(mainSource);
+    module->addSource(mainSource);
   }
   return mainSource->getFile();
 }
