@@ -2237,5 +2237,9 @@ TEST_F(FileTest, RichDebugInfoDeclare) {
   runFileTest("rich.debug.debugdeclare.hlsl", Expect::Success,
               /*runValidation*/ runValidationForRichDebugInfo);
 }
+TEST_F(FileTest, RichDebugInfoScope) {
+  runFileTest("rich.debug.debugscope.hlsl", Expect::Success,
+              /*runValidation*/ runValidationForRichDebugInfo);
+}
 
 } // namespace
