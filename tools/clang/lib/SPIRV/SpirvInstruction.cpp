@@ -867,12 +867,18 @@ SpirvDebugTypeBasic::SpirvDebugTypeBasic(llvm::StringRef name_,
     : SpirvDebugType(IK_DebugTypeBasic, /*opcode*/ 2u), name(name_),
       size(size_), encoding(encoding_) {}
 
-SpirvDebugTypeArray::SpirvDebugTypeArray(SpirvDebugInstruction *elemType,
+uint32_t SpirvDebugTypeBasic::getSizeInBits() const {
+  auto *size_ = dyn_cast<SpirvConstantInteger>(size);
+  assert(size_ && "Size of DebugTypeBasic must be int type const.");
+  return size_->getValue().getLimitedValue();
+}
+
+SpirvDebugTypeArray::SpirvDebugTypeArray(SpirvDebugType *elemType,
                                          llvm::ArrayRef<uint32_t> elemCount)
     : SpirvDebugType(IK_DebugTypeArray, /*opcode*/ 5u), elementType(elemType),
       elementCount(elemCount.begin(), elemCount.end()) {}
 
-SpirvDebugTypeVector::SpirvDebugTypeVector(SpirvDebugInstruction *elemType,
+SpirvDebugTypeVector::SpirvDebugTypeVector(SpirvDebugType *elemType,
                                            uint32_t elemCount)
     : SpirvDebugType(IK_DebugTypeVector, /*opcode*/ 6u), elementType(elemType),
       elementCount(elemCount) {}
@@ -884,23 +890,22 @@ SpirvDebugTypeFunction::SpirvDebugTypeFunction(
       returnType(ret), paramTypes(params.begin(), params.end()) {}
 
 SpirvDebugTypeMember::SpirvDebugTypeMember(
-    llvm::StringRef name_, SpirvDebugType *member_, SpirvInstruction *source_,
+    llvm::StringRef name_, SpirvDebugType *type_, SpirvDebugSource *source_,
     uint32_t line_, uint32_t column_, SpirvDebugInstruction *parent_,
     uint32_t offset_, uint32_t size_, uint32_t flags_, SpirvInstruction *value_)
     : SpirvDebugType(IK_DebugTypeMember, /*opcode*/ 11u), name(name_),
-      member(member_), source(source_), line(line_), column(column_),
+      type(type_), source(source_), line(line_), column(column_),
       parent(parent_), offset(offset_), size(size_), debugFlags(flags_),
       value(value_) {}
 
 SpirvDebugTypeComposite::SpirvDebugTypeComposite(
-    llvm::StringRef name_, SpirvInstruction *source_, uint32_t line_,
+    llvm::StringRef name_, SpirvDebugSource *source_, uint32_t line_,
     uint32_t column_, SpirvDebugInstruction *parent_,
     llvm::StringRef linkageName_, uint32_t size_, uint32_t flags_,
-    uint32_t tag_, llvm::ArrayRef<SpirvDebugInstruction *> members_)
+    uint32_t tag_)
     : SpirvDebugType(IK_DebugTypeComposite, /*opcode*/ 10u), name(name_),
       source(source_), line(line_), column(column_), parent(parent_),
-      linkageName(linkageName_), size(size_), debugFlags(flags_), tag(tag_),
-      members(members_.begin(), members_.end()) {}
+      linkageName(linkageName_), size(size_), debugFlags(flags_), tag(tag_) {}
 
 } // namespace spirv
 } // namespace clang

@@ -2119,6 +2119,8 @@ public:
            inst->getKind() <= IK_DebugTypeMember;
   }
 
+  virtual uint32_t getSizeInBits() const { return 0u; }
+
 protected:
   SpirvDebugType(Kind kind, uint32_t opcode)
       : SpirvDebugInstruction(kind, opcode) {}
@@ -2139,6 +2141,7 @@ public:
   llvm::StringRef getName() const { return name; }
   SpirvConstant *getSize() const { return size; }
   uint32_t getEncoding() const { return encoding; }
+  uint32_t getSizeInBits() const override;
 
 private:
   std::string name;
@@ -2158,7 +2161,7 @@ private:
 /// Represents array debug types
 class SpirvDebugTypeArray : public SpirvDebugType {
 public:
-  SpirvDebugTypeArray(SpirvDebugInstruction *elemType,
+  SpirvDebugTypeArray(SpirvDebugType *elemType,
                       llvm::ArrayRef<uint32_t> elemCount);
 
   static bool classof(const SpirvInstruction *inst) {
@@ -2167,18 +2170,25 @@ public:
 
   bool invokeVisitor(Visitor *v) override;
 
-  SpirvDebugInstruction *getElementType() const { return elementType; }
+  SpirvDebugType *getElementType() const { return elementType; }
   llvm::ArrayRef<uint32_t> getElementCount() const { return elementCount; }
 
+  uint32_t getSizeInBits() const override {
+    uint32_t nElem = elementType->getSizeInBits();
+    for (auto k : elementCount)
+      nElem *= k;
+    return nElem;
+  }
+
 private:
-  SpirvDebugInstruction *elementType;
+  SpirvDebugType *elementType;
   llvm::SmallVector<uint32_t, 4> elementCount;
 };
 
 /// Represents vector debug types
 class SpirvDebugTypeVector : public SpirvDebugType {
 public:
-  SpirvDebugTypeVector(SpirvDebugInstruction *elemType, uint32_t elemCount);
+  SpirvDebugTypeVector(SpirvDebugType *elemType, uint32_t elemCount);
 
   static bool classof(const SpirvInstruction *inst) {
     return inst->getKind() == IK_DebugTypeVector;
@@ -2186,11 +2196,15 @@ public:
 
   bool invokeVisitor(Visitor *v) override;
 
-  SpirvDebugInstruction *getElementType() const { return elementType; }
+  SpirvDebugType *getElementType() const { return elementType; }
   uint32_t getElementCount() const { return elementCount; }
 
+  uint32_t getSizeInBits() const override {
+    return elementCount * elementType->getSizeInBits();
+  }
+
 private:
-  SpirvDebugInstruction *elementType;
+  SpirvDebugType *elementType;
   uint32_t elementCount;
 };
 
@@ -2228,8 +2242,8 @@ private:
 /// type.
 class SpirvDebugTypeMember : public SpirvDebugType {
 public:
-  SpirvDebugTypeMember(llvm::StringRef name, SpirvDebugType *member,
-                       SpirvInstruction *source, uint32_t line, uint32_t column,
+  SpirvDebugTypeMember(llvm::StringRef name, SpirvDebugType *type,
+                       SpirvDebugSource *source, uint32_t line, uint32_t column,
                        SpirvDebugInstruction *parent, uint32_t offset,
                        uint32_t size, uint32_t flags,
                        SpirvInstruction *value = nullptr);
@@ -2242,10 +2256,21 @@ public:
 
   SpirvDebugInstruction *getParent() const override { return parent; }
 
+  llvm::StringRef getName() const { return name; }
+
+  SpirvDebugType *getType() const { return type; }
+  SpirvDebugSource *getSource() const { return source; }
+  uint32_t getLine() const { return line; }
+  uint32_t getColumn() const { return column; }
+  uint32_t getOffset() const { return offset; }
+  uint32_t getDebugFlags() const { return debugFlags; }
+  uint32_t getSizeInBits() const override { return size; }
+  SpirvInstruction *getValue() const { return value; }
+
 private:
   std::string name;         //< Name of the member as it appears in the program
-  SpirvDebugType *member;   //< The type of the current member
-  SpirvInstruction *source; //< DebugSource containing this type
+  SpirvDebugType *type;     //< The type of the current member
+  SpirvDebugSource *source; //< DebugSource containing this type
   uint32_t line;            //< Line number
   uint32_t column;          //< Column number
 
@@ -2264,12 +2289,11 @@ private:
 
 class SpirvDebugTypeComposite : public SpirvDebugType {
 public:
-  SpirvDebugTypeComposite(llvm::StringRef name, SpirvInstruction *source,
+  SpirvDebugTypeComposite(llvm::StringRef name, SpirvDebugSource *source,
                           uint32_t line, uint32_t column,
                           SpirvDebugInstruction *parent,
                           llvm::StringRef linkageName, uint32_t size,
-                          uint32_t flags, uint32_t tag,
-                          llvm::ArrayRef<SpirvDebugInstruction *> members);
+                          uint32_t flags, uint32_t tag);
 
   static bool classof(const SpirvInstruction *inst) {
     return inst->getKind() == IK_DebugTypeComposite;
@@ -2277,11 +2301,24 @@ public:
 
   bool invokeVisitor(Visitor *v) override;
 
+  llvm::SmallVector<SpirvDebugInstruction *, 4> &getMembers() {
+    return members;
+  }
   SpirvDebugInstruction *getParent() const override { return parent; }
+  llvm::StringRef getName() const { return name; }
+  uint32_t getTag() const { return tag; }
+  SpirvDebugSource *getSource() const { return source; }
+  uint32_t getLine() const { return line; }
+  uint32_t getColumn() const { return column; }
+  llvm::StringRef getLinkageName() const { return name; }
+  uint32_t getDebugFlags() const { return debugFlags; }
+
+  void setSizeInBits(uint32_t size_) { size = size_; }
+  uint32_t getSizeInBits() const override { return size; }
 
 private:
   std::string name;         //< Name of the member as it appears in the program
-  SpirvInstruction *source; //< DebugSource containing this type
+  SpirvDebugSource *source; //< DebugSource containing this type
   uint32_t line;            //< Line number
   uint32_t column;          //< Column number
 

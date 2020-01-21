@@ -386,6 +386,7 @@ const SpirvType *LowerTypeVisitor::lowerType(QualType type,
     // If this struct is derived from some other struct, place an implicit
     // field at the very beginning for the base struct.
     if (const auto *cxxDecl = dyn_cast<CXXRecordDecl>(decl)) {
+      // TODO: Add DebugTypeInheritance
       for (const auto base : cxxDecl->bases()) {
         fields.push_back(HybridStructType::FieldInfo(base.getType()));
       }
@@ -394,7 +395,7 @@ const SpirvType *LowerTypeVisitor::lowerType(QualType type,
     // Create fields for all members of this struct
     for (const auto *field : decl->fields()) {
       fields.push_back(HybridStructType::FieldInfo(
-          field->getType(), field->getName(),
+          field->getType(), field->getName(), field,
           /*vkoffset*/ field->getAttr<VKOffsetAttr>(),
           /*packoffset*/ getPackOffset(field),
           /*RegisterAssignment*/ nullptr,
@@ -403,7 +404,8 @@ const SpirvType *LowerTypeVisitor::lowerType(QualType type,
 
     auto loweredFields = populateLayoutInformation(fields, rule);
 
-    return spvContext.getStructType(loweredFields, decl->getName());
+    return spvContext.getStructType(loweredFields, decl->getName(), false,
+                                    StructInterfaceType::InternalStorage, decl);
   }
 
   // Array type
@@ -842,12 +844,16 @@ LowerTypeVisitor::populateLayoutInformation(
       loweredField.isRowMajor = isRowMajorMatrix(spvOptions, fieldType);
     }
 
+    loweredField.size = memberSize;
     loweredFields.push_back(loweredField);
   }
 
   // Re-order the sorted fields back to their original order.
-  for (const auto &field : fields)
-    result.push_back(loweredFields[fieldToIndexMap[&field]]);
+  for (const auto &field : fields) {
+    auto &f = loweredFields[fieldToIndexMap[&field]];
+    f.decl = field.decl;
+    result.push_back(f);
+  }
 
   return result;
 }

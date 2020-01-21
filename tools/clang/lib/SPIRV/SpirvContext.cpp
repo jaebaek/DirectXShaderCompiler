@@ -182,7 +182,8 @@ SpirvContext::getRuntimeArrayType(const SpirvType *elemType,
 const StructType *
 SpirvContext::getStructType(llvm::ArrayRef<StructType::FieldInfo> fields,
                             llvm::StringRef name, bool isReadOnly,
-                            StructInterfaceType interfaceType) {
+                            StructInterfaceType interfaceType,
+                            llvm::Optional<const RecordDecl *> decl) {
   // We are creating a temporary struct type here for querying whether the
   // same type was already created. It is a little bit costly, but we can
   // avoid allocating directly from the bump pointer allocator, from which
@@ -198,7 +199,7 @@ SpirvContext::getStructType(llvm::ArrayRef<StructType::FieldInfo> fields,
     return *found;
 
   structTypes.push_back(
-      new (this) StructType(fields, name, isReadOnly, interfaceType));
+      new (this) StructType(fields, name, isReadOnly, interfaceType, decl));
 
   return structTypes.back();
 }
@@ -281,6 +282,46 @@ SpirvContext::getDebugTypeBasic(const SpirvType *spirvType,
 }
 
 SpirvDebugInstruction *
+SpirvContext::getDebugTypeMember(llvm::StringRef name, SpirvDebugType *type,
+                                 SpirvDebugSource *source, uint32_t line,
+                                 uint32_t column, SpirvDebugInstruction *parent,
+                                 uint32_t offset, uint32_t size, uint32_t flags,
+                                 llvm::Optional<SpirvInstruction *> value) {
+  // NOTE: Do not search it in debugTypes because it would have the same
+  // spirvType but has different parent i.e., type composite.
+
+  SpirvDebugTypeMember *debugType = nullptr;
+  if (value.hasValue()) {
+    debugType = new (this) SpirvDebugTypeMember(
+        name, type, source, line, column, parent, offset, size, flags, *value);
+  } else {
+    debugType = new (this) SpirvDebugTypeMember(
+        name, type, source, line, column, parent, offset, size, flags);
+  }
+
+  // NOTE: Do not save it in debugTypes because it would have the same
+  // spirvType but it has different parent i.e., type composite. Instead,
+  // we want to keep DebugTypeMember and DebugTypeInheritance in
+  // memberTypes.
+  memberTypes.push_back(debugType);
+  return debugType;
+}
+
+SpirvDebugInstruction *SpirvContext::getDebugTypeComposite(
+    const SpirvType *spirvType, llvm::StringRef name, SpirvDebugSource *source,
+    uint32_t line, uint32_t column, SpirvDebugInstruction *parent,
+    llvm::StringRef linkageName, uint32_t size, uint32_t flags, uint32_t tag) {
+  // Reuse existing debug type if possible.
+  if (debugTypes.find(spirvType) != debugTypes.end())
+    return debugTypes[spirvType];
+
+  auto *debugType = new (this) SpirvDebugTypeComposite(
+      name, source, line, column, parent, linkageName, size, flags, tag);
+  debugTypes[spirvType] = debugType;
+  return debugType;
+}
+
+SpirvDebugInstruction *
 SpirvContext::getDebugTypeArray(const SpirvType *spirvType,
                                 SpirvDebugInstruction *elemType,
                                 llvm::ArrayRef<uint32_t> elemCount) {
@@ -288,7 +329,9 @@ SpirvContext::getDebugTypeArray(const SpirvType *spirvType,
   if (debugTypes.find(spirvType) != debugTypes.end())
     return debugTypes[spirvType];
 
-  auto *debugType = new (this) SpirvDebugTypeArray(elemType, elemCount);
+  auto *eTy = dyn_cast<SpirvDebugType>(elemType);
+  assert(eTy && "Element type must be a SpirvDebugType.");
+  auto *debugType = new (this) SpirvDebugTypeArray(eTy, elemCount);
   debugTypes[spirvType] = debugType;
   return debugType;
 }
@@ -301,7 +344,9 @@ SpirvContext::getDebugTypeVector(const SpirvType *spirvType,
   if (debugTypes.find(spirvType) != debugTypes.end())
     return debugTypes[spirvType];
 
-  auto *debugType = new (this) SpirvDebugTypeVector(elemType, elemCount);
+  auto *eTy = dyn_cast<SpirvDebugType>(elemType);
+  assert(eTy && "Element type must be a SpirvDebugType.");
+  auto *debugType = new (this) SpirvDebugTypeVector(eTy, elemCount);
   debugTypes[spirvType] = debugType;
   return debugType;
 }

@@ -169,9 +169,15 @@ bool RuntimeArrayType::operator==(const RuntimeArrayType &that) const {
 
 StructType::StructType(llvm::ArrayRef<StructType::FieldInfo> fieldsVec,
                        llvm::StringRef name, bool isReadOnly,
-                       StructInterfaceType iface)
+                       StructInterfaceType iface,
+                       llvm::Optional<const RecordDecl *> decl_)
     : SpirvType(TK_Struct, name), fields(fieldsVec.begin(), fieldsVec.end()),
-      readOnly(isReadOnly), interfaceType(iface) {}
+      readOnly(isReadOnly), interfaceType(iface) {
+  if (decl_.hasValue())
+    decl = *decl_;
+  else
+    decl = nullptr;
+}
 
 bool StructType::FieldInfo::
 operator==(const StructType::FieldInfo &that) const {

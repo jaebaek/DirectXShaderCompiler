@@ -556,6 +556,7 @@ SpirvEmitter::SpirvEmitter(CompilerInstance &ci)
 
   // OpenCL.DebugInfo.100 DebugSource
   if (spirvOptions.debugInfoRich) {
+    auto &debugInfo = spvContext.getDebugInfo();
     for (uint32_t i = 0; i < fileNames.size(); ++i) {
       const auto &file = fileNames[i];
       auto *dbgSrc = spvBuilder.createDebugSource(file, i == 0 ? source : "");
@@ -754,6 +755,7 @@ RichDebugInfo *
 SpirvEmitter::getOrCreateRichDebugInfo(const SourceLocation &loc) {
   const StringRef file =
       astContext.getSourceManager().getPresumedLoc(loc).getFilename();
+  auto &debugInfo = spvContext.getDebugInfo();
   auto it = debugInfo.find(file);
   if (it != debugInfo.end())
     return &it->second;
@@ -1109,17 +1111,31 @@ void SpirvEmitter::doFunctionDecl(const FunctionDecl *decl) {
     info = getOrCreateRichDebugInfo(loc);
 
     auto *source = info->source;
+    // TODO: Revisit this. There are some cases that info->scopeStack.back()
+    // is not a parent scope of this function. Consider the case we suddenly
+    // handle a function decl (doFunctionDecl) when we meet a function call.
+    // The function call itself is not a place for this function definition.
+    // Therefore, its parent is not a parent scope of this function definition.
     auto *parentScope = info->scopeStack.back();
     // TODO: figure out the proper flag based on the function decl.
     // using FlagIsPublic for now.
     uint32_t flags = 3u;
     // The line number in the source program at which the function scope begins.
     auto scopeLine = sm.getPresumedLineNumber(decl->getBody()->getLocStart());
-    SpirvDebugInstruction *debugFunction;
+    SpirvDebugFunction *debugFunction;
     debugFunction = spvBuilder.createDebugFunction(
         funcName, source, line, column, parentScope, funcName, flags, scopeLine,
         func);
     func->setDebugScope(new (astContext) SpirvDebugScope(debugFunction));
+
+    // We want to keep member function info of a structure, but a StructType
+    // was not created yet. SpirvContext holds a map between RecordDecl and
+    // its member function list. When StructType will be created, it will
+    // keep its member function info. It will be used to create
+    // DebugTypeComposite in DebugTypeVisitor.
+    if (const auto *methodDecl = dyn_cast<CXXMethodDecl>(decl)) {
+      spvContext.saveFuntionInfo(methodDecl->getParent(), debugFunction);
+    }
 
     info->scopeStack.push_back(debugFunction);
     spvBuilder.setCurrentLexicalScope(info->scopeStack.back());

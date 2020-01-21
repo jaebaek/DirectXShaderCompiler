@@ -10,11 +10,128 @@
 #include <sstream>
 
 #include "DebugTypeVisitor.h"
+#include "clang/AST/Mangle.h"
 #include "clang/SPIRV/SpirvBuilder.h"
 #include "clang/SPIRV/SpirvModule.h"
+#include "llvm/ADT/SmallSet.h"
 
 namespace clang {
 namespace spirv {
+
+SpirvDebugInstruction *
+DebugTypeVisitor::lowerToDebugTypeEnum(const StructType *type) {
+  return nullptr;
+}
+
+SpirvDebugInstruction *
+DebugTypeVisitor::lowerToDebugTypeComposite(const StructType *type) {
+  const auto &sm = astContext.getSourceManager();
+
+  StringRef file = "";
+  uint32_t line = 0;
+  uint32_t column = 0;
+  StringRef linkageName = type->getName();
+  uint32_t tag = 1;
+  bool isPrivate = false;
+
+  const auto *decl = type->getDecl();
+  if (decl) {
+    const SourceLocation &loc = decl->getLocStart();
+    file = sm.getPresumedLoc(loc).getFilename();
+    line = sm.getPresumedLineNumber(loc);
+    column = sm.getPresumedColumnNumber(loc);
+
+    // TODO: Update linkageName using astContext.createMangleContext().
+    //
+    // Currently, the following code fails because it is not a
+    // FunctionDecl nor VarDecl. I guess we should mangle a RecordDecl
+    // as well.
+    //
+    // std::string s;
+    // llvm::raw_string_ostream stream(s);
+    // mangleCtx->mangleName(decl, stream);
+
+    if (decl->isStruct())
+      tag = 1;
+    else if (decl->isClass())
+      tag = 0;
+    else if (decl->isUnion())
+      tag = 2;
+    else
+      assert(!"DebugTypeComposite must be a struct, class, or union.");
+
+    isPrivate = decl->isModulePrivate();
+  }
+
+  // TODO: Update parent, size, and flags information correctly.
+  auto &debugInfo = spvContext.getDebugInfo()[file];
+  auto *dbgTyComposite =
+      dyn_cast<SpirvDebugTypeComposite>(spvContext.getDebugTypeComposite(
+          type, type->getName(), debugInfo.source, line, column,
+          /* parent */ debugInfo.compilationUnit, linkageName,
+          /* size */ 0,
+          /* flags */ isPrivate ? 2u : 3u, tag));
+
+  // If we already visited this composite type and its members,
+  // we should skip it.
+  auto &members = dbgTyComposite->getMembers();
+  if (!members.empty())
+    return dbgTyComposite;
+
+  uint32_t sizeInBits = 0;
+  uint32_t offsetInBits = 0;
+  llvm::SmallSet<const FieldDecl *, 4> visited;
+  for (auto &field : type->getFields()) {
+    assert(field.decl && "Field must contain its declaration");
+    auto cnt = visited.count(field.decl);
+    if (cnt)
+      continue;
+    visited.insert(field.decl);
+
+    SpirvDebugType *fieldTy =
+        dyn_cast<SpirvDebugType>(lowerToDebugType(field.type));
+    assert(fieldTy && "Field type must be SpirvDebugType");
+
+    const SourceLocation &fieldLoc = field.decl->getLocStart();
+    const StringRef fieldFile = sm.getPresumedLoc(fieldLoc).getFilename();
+    const uint32_t fieldLine = sm.getPresumedLineNumber(fieldLoc);
+    const uint32_t fieldColumn = sm.getPresumedColumnNumber(fieldLoc);
+
+    uint32_t fieldSizeInBits = fieldTy->getSizeInBits();
+    uint32_t fieldOffset =
+        field.offset.hasValue() ? *field.offset : offsetInBits;
+
+    llvm::Optional<SpirvInstruction *> value = llvm::None;
+    if (const auto *varDecl = dyn_cast<VarDecl>(field.decl)) {
+      if (const auto *val = varDecl->evaluateValue()) {
+        if (val->isInt()) {
+          *value = spvBuilder.getConstantInt(astContext.IntTy, val->getInt());
+        } else if (val->isFloat()) {
+          *value =
+              spvBuilder.getConstantFloat(astContext.FloatTy, val->getFloat());
+        }
+        // TODO: Handle other constant types.
+      }
+    }
+
+    auto *debugInstr =
+        dyn_cast<SpirvDebugInstruction>(spvContext.getDebugTypeMember(
+            field.name, fieldTy, spvContext.getDebugInfo()[fieldFile].source,
+            fieldLine, fieldColumn, dbgTyComposite, fieldOffset,
+            fieldSizeInBits, field.decl->isModulePrivate() ? 2u : 3u, value));
+    assert(debugInstr && "We expect SpirvDebugInstruction for DebugTypeMember");
+    debugInstr->setAstResultType(astContext.VoidTy);
+    debugInstr->setResultType(spvContext.getVoidType());
+    debugInstr->setInstructionSet(spvBuilder.getOpenCLDebugInfoExtInstSet());
+    members.push_back(debugInstr);
+
+    offsetInBits = fieldOffset + fieldSizeInBits;
+    if (sizeInBits < offsetInBits)
+      sizeInBits = offsetInBits;
+  }
+  dbgTyComposite->setSizeInBits(sizeInBits);
+  return dbgTyComposite;
+}
 
 SpirvDebugInstruction *
 DebugTypeVisitor::lowerToDebugType(const SpirvType *spirvType) {
@@ -75,6 +192,17 @@ DebugTypeVisitor::lowerToDebugType(const SpirvType *spirvType) {
                                              sizeInstruction, encoding);
     break;
   }
+  case SpirvType::TK_Struct: {
+    const auto *structType = dyn_cast<StructType>(spirvType);
+    const auto *decl = structType->getDecl();
+    if (decl && decl->isEnum())
+      debugType = lowerToDebugTypeEnum(structType);
+    else
+      debugType = lowerToDebugTypeComposite(structType);
+    break;
+  }
+  // TODO: Add DebugTypeComposite for class and union.
+  // TODO: Add DebugTypeEnum.
   case SpirvType::TK_Array: {
     auto *arrType = dyn_cast<ArrayType>(spirvType);
     SpirvDebugInstruction *elemDebugType =
@@ -171,6 +299,9 @@ bool DebugTypeVisitor::visit(SpirvModule *module, Phase phase) {
     // there could be duplicates.
     for (const auto typePair : spvContext.getDebugTypes()) {
       module->addDebugInfo(typePair.second);
+    }
+    for (auto *type : spvContext.getMemberTypes()) {
+      module->addDebugInfo(type);
     }
   }
 

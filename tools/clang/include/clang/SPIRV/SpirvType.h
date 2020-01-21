@@ -23,6 +23,7 @@ namespace clang {
 namespace spirv {
 
 class HybridType;
+class SpirvDebugFunction;
 
 enum class StructInterfaceType : uint32_t {
   InternalStorage = 0,
@@ -295,7 +296,8 @@ public:
               bool relaxedPrecision = false, bool precise = false)
         : type(type_), name(name_), offset(offset_),
           matrixStride(matrixStride_), isRowMajor(isRowMajor_),
-          isRelaxedPrecision(relaxedPrecision), isPrecise(precise) {
+          isRelaxedPrecision(relaxedPrecision), isPrecise(precise),
+          size(llvm::None), decl(nullptr) {
       // A StructType may not contain any hybrid types.
       assert(!isa<HybridType>(type_));
     }
@@ -316,11 +318,16 @@ public:
     bool isRelaxedPrecision;
     // Whether this field is marked as 'precise'.
     bool isPrecise;
+    // The integer size in byte for this field.
+    llvm::Optional<uint32_t> size;
+    // Used to get source, line, column debug information.
+    const FieldDecl *decl;
   };
 
   StructType(
       llvm::ArrayRef<FieldInfo> fields, llvm::StringRef name, bool isReadOnly,
-      StructInterfaceType interfaceType = StructInterfaceType::InternalStorage);
+      StructInterfaceType interfaceType = StructInterfaceType::InternalStorage,
+      llvm::Optional<const RecordDecl *> decl = llvm::None);
 
   static bool classof(const SpirvType *t) { return t->getKind() == TK_Struct; }
 
@@ -330,6 +337,15 @@ public:
   StructInterfaceType getInterfaceType() const { return interfaceType; }
 
   bool operator==(const StructType &that) const;
+
+  void setMemberFunctionInfo(std::vector<const SpirvDebugFunction *> v) {
+    memberFnInfo = v;
+  }
+  std::vector<const SpirvDebugFunction *> &getMemberFunctionInfo() {
+    return memberFnInfo;
+  }
+
+  const RecordDecl *getDecl() const { return decl; }
 
 private:
   // Reflection is heavily used in graphics pipelines. Reflection relies on
@@ -343,6 +359,12 @@ private:
   // If this structure is a uniform buffer shader-interface, it will be
   // decorated with 'Block'.
   StructInterfaceType interfaceType;
+
+  // A vector of member function info.
+  std::vector<const SpirvDebugFunction *> memberFnInfo;
+
+  // Used to get source, line, column debug information.
+  const RecordDecl *decl;
 };
 
 /// Represents a SPIR-V pointer type.
@@ -419,11 +441,12 @@ public:
   struct FieldInfo {
   public:
     FieldInfo(QualType astType_, llvm::StringRef name_ = "",
+              const FieldDecl *decl_ = nullptr,
               clang::VKOffsetAttr *offset = nullptr,
               hlsl::ConstantPacking *packOffset = nullptr,
               const hlsl::RegisterAssignment *regC = nullptr,
               bool precise = false)
-        : astType(astType_), name(name_), vkOffsetAttr(offset),
+        : astType(astType_), name(name_), decl(decl_), vkOffsetAttr(offset),
           packOffsetAttr(packOffset), registerC(regC), isPrecise(precise) {}
 
     // The field's type.
@@ -438,6 +461,8 @@ public:
     const hlsl::RegisterAssignment *registerC;
     // Whether this field is marked as 'precise'.
     bool isPrecise;
+    // Used to get source, line, column debug information.
+    const FieldDecl *decl;
   };
 
   HybridStructType(

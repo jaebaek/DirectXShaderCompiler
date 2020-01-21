@@ -23,6 +23,23 @@
 namespace clang {
 namespace spirv {
 
+struct RichDebugInfo {
+  RichDebugInfo(SpirvDebugSource *src, SpirvDebugCompilationUnit *cu)
+      : source(src), compilationUnit(cu) {
+    scopeStack.push_back(cu);
+  }
+  RichDebugInfo() : source(nullptr), compilationUnit(nullptr), scopeStack() {}
+
+  // The HLL source code
+  SpirvDebugSource *source;
+
+  // The compilation unit (topmost debug info node)
+  SpirvDebugCompilationUnit *compilationUnit;
+
+  // Stack of lexical scopes
+  std::vector<SpirvDebugInstruction *> scopeStack;
+};
+
 // Provides DenseMapInfo for spv::StorageClass so that we can use
 // spv::StorageClass as key to DenseMap.
 //
@@ -148,6 +165,20 @@ public:
                                            SpirvConstant *size,
                                            uint32_t encoding);
 
+  SpirvDebugInstruction *
+  getDebugTypeMember(llvm::StringRef name, SpirvDebugType *type,
+                     SpirvDebugSource *source, uint32_t line, uint32_t column,
+                     SpirvDebugInstruction *parent, uint32_t offset,
+                     uint32_t size, uint32_t flags,
+                     llvm::Optional<SpirvInstruction *> value = llvm::None);
+
+  SpirvDebugInstruction *
+  getDebugTypeComposite(const SpirvType *spirvType, llvm::StringRef name,
+                        SpirvDebugSource *source, uint32_t line,
+                        uint32_t column, SpirvDebugInstruction *parent,
+                        llvm::StringRef linkageName, uint32_t size,
+                        uint32_t flags, uint32_t tag);
+
   SpirvDebugInstruction *getDebugTypeArray(const SpirvType *spirvType,
                                            SpirvDebugInstruction *elemType,
                                            llvm::ArrayRef<uint32_t> elemCount);
@@ -163,6 +194,10 @@ public:
 
   llvm::MapVector<const SpirvType *, SpirvDebugType *> getDebugTypes() const {
     return debugTypes;
+  }
+
+  llvm::SmallVector<SpirvDebugInstruction *, 16> getMemberTypes() const {
+    return memberTypes;
   }
 
   // === Types ===
@@ -195,7 +230,16 @@ public:
   const StructType *getStructType(
       llvm::ArrayRef<StructType::FieldInfo> fields, llvm::StringRef name,
       bool isReadOnly = false,
-      StructInterfaceType interfaceType = StructInterfaceType::InternalStorage);
+      StructInterfaceType interfaceType = StructInterfaceType::InternalStorage,
+      llvm::Optional<const RecordDecl *> decl = llvm::None);
+
+  void saveFuntionInfo(const RecordDecl *decl, const SpirvDebugFunction *fn) {
+    auto it = structDeclToFnList.find(decl);
+    if (it != structDeclToFnList.end())
+      it->second.push_back(fn);
+    else
+      structDeclToFnList[decl] = {fn};
+  }
 
   const SpirvPointerType *getPointerType(const SpirvType *pointee,
                                          spv::StorageClass);
@@ -255,6 +299,10 @@ public:
     return curShaderModelKind == ShaderModelKind::Amplification;
   }
 
+  llvm::MapVector<llvm::StringRef, RichDebugInfo> &getDebugInfo() {
+    return debugInfo;
+  }
+
 private:
   /// \brief The allocator used to create SPIR-V entity objects.
   ///
@@ -305,10 +353,30 @@ private:
   uint32_t majorVersion;
   uint32_t minorVersion;
 
+  /// File name to rich debug info map. When the main source file
+  /// includes header files, we create an element of debugInfo for
+  /// each file. RichDebugInfo includes DebugSource,
+  /// DebugCompilationUnit and scopeStack which keeps lexical scopes
+  /// recursively.
+  llvm::MapVector<llvm::StringRef, RichDebugInfo> debugInfo;
+
   // Mapping from SPIR-V type to debug type instruction.
   // The purpose is not to generate several DebugType* instructions for the same
   // type if the type is used for several variables.
   llvm::MapVector<const SpirvType *, SpirvDebugType *> debugTypes;
+
+  // Keep DebugTypeMember and DebugTypeInheritance.
+  // Since both DebugTypeMember and DebugTypeInheritance do not have
+  // corresponding SpirvType, we cannot keep them in debugTypes.
+  // No component reference DebugTypeMember and DebugTypeInheritance,
+  // there by being able to safely emit them at the end of other debug
+  // extension instructions.
+  llvm::SmallVector<SpirvDebugInstruction *, 16> memberTypes;
+
+  // Mapping from RecordDecl (struct or class or enum) to a vector of its member
+  // function info.
+  llvm::DenseMap<const RecordDecl *, std::vector<const SpirvDebugFunction *>>
+      structDeclToFnList;
 };
 
 } // end namespace spirv

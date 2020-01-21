@@ -59,6 +59,9 @@ private:
   /// depends on will also be created.
   SpirvDebugInstruction *lowerToDebugType(const SpirvType *);
 
+  SpirvDebugInstruction *lowerToDebugTypeEnum(const StructType *);
+  SpirvDebugInstruction *lowerToDebugTypeComposite(const StructType *);
+
 private:
   ASTContext &astContext;   /// AST context
   SpirvContext &spvContext; /// SPIR-V context

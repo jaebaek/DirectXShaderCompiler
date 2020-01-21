@@ -800,7 +800,7 @@ SpirvVariable *DeclResultIdMapper::createStructOrStructArrayVarOfExplicitLayout(
     // We don't need it here.
     auto varType = declDecl->getType();
     varType.removeLocalConst();
-    HybridStructType::FieldInfo info(varType, declDecl->getName(),
+    HybridStructType::FieldInfo info(varType, declDecl->getName(), nullptr,
                                      declDecl->getAttr<VKOffsetAttr>(),
                                      getPackOffset(declDecl), registerC,
                                      declDecl->hasAttr<HLSLPreciseAttr>());
