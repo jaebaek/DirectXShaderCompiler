@@ -36,33 +36,31 @@ DebugTypeVisitor::lowerToDebugTypeComposite(const StructType *type) {
   bool isPrivate = false;
 
   const auto *decl = type->getDecl();
-  if (decl) {
-    const SourceLocation &loc = decl->getLocStart();
-    file = sm.getPresumedLoc(loc).getFilename();
-    line = sm.getPresumedLineNumber(loc);
-    column = sm.getPresumedColumnNumber(loc);
+  const SourceLocation &loc = decl->getLocStart();
+  file = sm.getPresumedLoc(loc).getFilename();
+  line = sm.getPresumedLineNumber(loc);
+  column = sm.getPresumedColumnNumber(loc);
 
-    // TODO: Update linkageName using astContext.createMangleContext().
-    //
-    // Currently, the following code fails because it is not a
-    // FunctionDecl nor VarDecl. I guess we should mangle a RecordDecl
-    // as well.
-    //
-    // std::string s;
-    // llvm::raw_string_ostream stream(s);
-    // mangleCtx->mangleName(decl, stream);
+  // TODO: Update linkageName using astContext.createMangleContext().
+  //
+  // Currently, the following code fails because it is not a
+  // FunctionDecl nor VarDecl. I guess we should mangle a RecordDecl
+  // as well.
+  //
+  // std::string s;
+  // llvm::raw_string_ostream stream(s);
+  // mangleCtx->mangleName(decl, stream);
 
-    if (decl->isStruct())
-      tag = 1;
-    else if (decl->isClass())
-      tag = 0;
-    else if (decl->isUnion())
-      tag = 2;
-    else
-      assert(!"DebugTypeComposite must be a struct, class, or union.");
+  if (decl->isStruct())
+    tag = 1;
+  else if (decl->isClass())
+    tag = 0;
+  else if (decl->isUnion())
+    tag = 2;
+  else
+    assert(!"DebugTypeComposite must be a struct, class, or union.");
 
-    isPrivate = decl->isModulePrivate();
-  }
+  isPrivate = decl->isModulePrivate();
 
   // TODO: Update parent, size, and flags information correctly.
   auto &debugInfo = spvContext.getDebugInfo()[file];
@@ -214,10 +212,12 @@ DebugTypeVisitor::lowerToDebugType(const SpirvType *spirvType) {
   case SpirvType::TK_Struct: {
     const auto *structType = dyn_cast<StructType>(spirvType);
     const auto *decl = structType->getDecl();
-    if (decl && decl->isEnum())
-      debugType = lowerToDebugTypeEnum(structType);
-    else
-      debugType = lowerToDebugTypeComposite(structType);
+    if (decl) {
+      if (decl->isEnum())
+        debugType = lowerToDebugTypeEnum(structType);
+      else
+        debugType = lowerToDebugTypeComposite(structType);
+    }
     break;
   }
   // TODO: Add DebugTypeComposite for class and union.
@@ -263,6 +263,13 @@ DebugTypeVisitor::lowerToDebugType(const SpirvType *spirvType) {
         spvContext.getDebugTypeFunction(spirvType, flags, returnType, params);
     break;
   }
+  }
+
+  // TODO: When we emit all debug type completely, we should remove "Unknown"
+  // type.
+  if (!debugType) {
+    debugType =
+        spvContext.getDebugTypeBasic(nullptr, "Unknown", 0, 0 /*Unspecified*/);
   }
 
   debugType->setAstResultType(astContext.VoidTy);
