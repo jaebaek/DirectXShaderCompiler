@@ -1134,7 +1134,7 @@ void SpirvEmitter::doFunctionDecl(const FunctionDecl *decl) {
     // keep its member function info. It will be used to create
     // DebugTypeComposite in DebugTypeVisitor.
     if (const auto *methodDecl = dyn_cast<CXXMethodDecl>(decl)) {
-      spvContext.saveFuntionInfo(methodDecl->getParent(), debugFunction);
+      spvContext.saveFuntionInfo(methodDecl, debugFunction);
     }
 
     info->scopeStack.push_back(debugFunction);

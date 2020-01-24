@@ -18,10 +18,10 @@ namespace {
 template <class T>
 void addDebugInfoToMap(
     llvm::DenseMap<SpirvDebugInstruction *, std::vector<T *>> &map, T *info,
-    SpirvDebugInstruction *alt) {
+    SpirvDebugInstruction *altParent) {
   auto *parent = info->getParent();
   if (!parent)
-    parent = alt;
+    parent = altParent;
 
   auto it = map.find(parent);
   if (it != map.end()) {

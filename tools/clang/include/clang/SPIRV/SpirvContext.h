@@ -233,12 +233,14 @@ public:
       StructInterfaceType interfaceType = StructInterfaceType::InternalStorage,
       llvm::Optional<const RecordDecl *> decl = llvm::None);
 
-  void saveFuntionInfo(const RecordDecl *decl, const SpirvDebugFunction *fn) {
+  void saveFuntionInfo(const CXXMethodDecl *decl, SpirvDebugFunction *fn) {
+    structDeclToFnList[decl] = fn;
+  }
+  SpirvDebugFunction *findFunctionInfo(const CXXMethodDecl *decl) {
     auto it = structDeclToFnList.find(decl);
     if (it != structDeclToFnList.end())
-      it->second.push_back(fn);
-    else
-      structDeclToFnList[decl] = {fn};
+      return it->second;
+    return nullptr;
   }
 
   const SpirvPointerType *getPointerType(const SpirvType *pointee,
@@ -375,7 +377,7 @@ private:
 
   // Mapping from RecordDecl (struct or class or enum) to a vector of its member
   // function info.
-  llvm::DenseMap<const RecordDecl *, std::vector<const SpirvDebugFunction *>>
+  llvm::DenseMap<const CXXMethodDecl *, SpirvDebugFunction *>
       structDeclToFnList;
 };
 

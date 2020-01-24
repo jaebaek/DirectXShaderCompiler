@@ -10,6 +10,7 @@
 #include <sstream>
 
 #include "DebugTypeVisitor.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Mangle.h"
 #include "clang/SPIRV/SpirvBuilder.h"
 #include "clang/SPIRV/SpirvModule.h"
@@ -81,7 +82,25 @@ DebugTypeVisitor::lowerToDebugTypeComposite(const StructType *type) {
   uint32_t sizeInBits = 0;
   uint32_t offsetInBits = 0;
   llvm::SmallSet<const FieldDecl *, 4> visited;
-  for (auto &field : type->getFields()) {
+
+  auto fieldIt = type->getFields().begin();
+  for (auto &memberDecl : decl->decls()) {
+    if (const auto *cxxMethodDecl = dyn_cast<CXXMethodDecl>(memberDecl)) {
+      auto *fn = spvContext.findFunctionInfo(cxxMethodDecl);
+      assert(fn && "DebugFunction for method does not exist");
+      members.push_back(fn);
+      continue;
+    }
+
+    if (isa<CXXRecordDecl>(memberDecl))
+      continue;
+
+    auto &field = *fieldIt++;
+    assert(isa<FieldDecl>(memberDecl) &&
+           "Decl of member must be CXXMethodDecl, CXXRecordDecl, or FieldDecl");
+    assert(memberDecl == field.decl &&
+           "Field in SpirvType does not match to member decl");
+
     assert(field.decl && "Field must contain its declaration");
     auto cnt = visited.count(field.decl);
     if (cnt)

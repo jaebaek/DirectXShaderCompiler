@@ -22,10 +22,14 @@ struct foo {
 // CHECK: [[set:%\d+]] = OpExtInstImport "OpenCL.DebugInfo.100"
 // CHECK: [[foo:%\d+]] = OpString "foo"
 // CHECK: [[a_name:%\d+]] = OpString "a"
+// CHECK: [[func0:%\d+]] = OpString "foo.func0"
+// CHECK: [[func1:%\d+]] = OpString "foo.func1"
 // CHECK: [[b_name:%\d+]] = OpString "b"
 // CHECK: [[c_name:%\d+]] = OpString "c"
 
-// CHECK: OpExtInst %void [[set]] DebugTypeComposite [[foo]] Structure {{%\d+}} 3 1 {{%\d+}} {{%\d+}} %uint_192 FlagIsProtected|FlagIsPrivate [[a:%\d+]] [[b:%\d+]] [[c:%\d+]]
+// CHECK: OpExtInst %void [[set]] DebugTypeComposite [[foo]] Structure {{%\d+}} 3 1 {{%\d+}} {{%\d+}} %uint_192 FlagIsProtected|FlagIsPrivate [[a:%\d+]] [[f0:%\d+]] [[b:%\d+]] [[f1:%\d+]] [[c:%\d+]]
+// CHECK: [[f0]] = OpExtInst %void [[set]] DebugFunction [[func0]] {{%\d+}} {{%\d+}} 6 3 {{%\d+}} {{%\d+}} FlagIsProtected|FlagIsPrivate 6 %foo_func0
+// CHECK: [[f1]] = OpExtInst %void [[set]] DebugFunction [[func1]] {{%\d+}} {{%\d+}} 12 3 {{%\d+}} {{%\d+}} FlagIsProtected|FlagIsPrivate 12 %foo_func1
 // CHECK: [[a]] = OpExtInst %void [[set]] DebugTypeMember [[a_name]]
 // CHECK: [[b]] = OpExtInst %void [[set]] DebugTypeMember [[b_name]]
 // CHECK: [[c]] = OpExtInst %void [[set]] DebugTypeMember [[c_name]]
