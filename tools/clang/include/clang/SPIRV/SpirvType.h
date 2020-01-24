@@ -23,7 +23,6 @@ namespace clang {
 namespace spirv {
 
 class HybridType;
-class SpirvDebugFunction;
 
 enum class StructInterfaceType : uint32_t {
   InternalStorage = 0,
@@ -338,13 +337,6 @@ public:
 
   bool operator==(const StructType &that) const;
 
-  void setMemberFunctionInfo(std::vector<const SpirvDebugFunction *> v) {
-    memberFnInfo = v;
-  }
-  std::vector<const SpirvDebugFunction *> &getMemberFunctionInfo() {
-    return memberFnInfo;
-  }
-
   const RecordDecl *getDecl() const { return decl; }
 
 private:
@@ -359,9 +351,6 @@ private:
   // If this structure is a uniform buffer shader-interface, it will be
   // decorated with 'Block'.
   StructInterfaceType interfaceType;
-
-  // A vector of member function info.
-  std::vector<const SpirvDebugFunction *> memberFnInfo;
 
   // Used to get source, line, column debug information.
   const RecordDecl *decl;
