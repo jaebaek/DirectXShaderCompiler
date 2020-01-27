@@ -884,8 +884,8 @@ SpirvDebugTypeVector::SpirvDebugTypeVector(SpirvDebugType *elemType,
       elementCount(elemCount) {}
 
 SpirvDebugTypeFunction::SpirvDebugTypeFunction(
-    uint32_t flags, SpirvDebugInstruction *ret,
-    llvm::ArrayRef<SpirvDebugInstruction *> params)
+    uint32_t flags, SpirvDebugType *ret,
+    llvm::ArrayRef<SpirvDebugType *> params)
     : SpirvDebugType(IK_DebugTypeFunction, /*opcode*/ 8u), debugFlags(flags),
       returnType(ret), paramTypes(params.begin(), params.end()) {}
 

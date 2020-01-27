@@ -2229,8 +2229,8 @@ private:
 /// parameter types.
 class SpirvDebugTypeFunction : public SpirvDebugType {
 public:
-  SpirvDebugTypeFunction(uint32_t flags, SpirvDebugInstruction *ret,
-                         llvm::ArrayRef<SpirvDebugInstruction *> params);
+  SpirvDebugTypeFunction(uint32_t flags, SpirvDebugType *ret,
+                         llvm::ArrayRef<SpirvDebugType *> params);
 
   static bool classof(const SpirvInstruction *inst) {
     return inst->getKind() == IK_DebugTypeFunction;
@@ -2239,10 +2239,8 @@ public:
   bool invokeVisitor(Visitor *v) override;
 
   uint32_t getDebugFlags() const { return debugFlags; }
-  SpirvDebugInstruction *getReturnType() const { return returnType; }
-  llvm::ArrayRef<SpirvDebugInstruction *> getParamTypes() const {
-    return paramTypes;
-  }
+  SpirvDebugType *getReturnType() const { return returnType; }
+  llvm::ArrayRef<SpirvDebugType *> getParamTypes() const { return paramTypes; }
 
 private:
   // TODO: Replace uint32_t with enum in the SPIRV-Headers once it is available.
@@ -2250,8 +2248,8 @@ private:
   // Return Type is a debug instruction which represents type of return value of
   // the function. If the function has no return value, this operand is
   // OpTypeVoid, in which case we will use nullptr for this member.
-  SpirvDebugInstruction *returnType;
-  llvm::SmallVector<SpirvDebugInstruction *, 4> paramTypes;
+  SpirvDebugType *returnType;
+  llvm::SmallVector<SpirvDebugType *, 4> paramTypes;
 };
 
 /// Represents the debug type of a struct/union/class member.

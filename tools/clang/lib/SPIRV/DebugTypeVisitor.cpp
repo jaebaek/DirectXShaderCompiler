@@ -247,13 +247,16 @@ DebugTypeVisitor::lowerToDebugType(const SpirvType *spirvType) {
     auto *fnType = dyn_cast<FunctionType>(spirvType);
     // Special case: There is no DebugType for void. So if the function return
     // type is void, we set it to nullptr.
-    SpirvDebugInstruction *returnType =
-        isa<VoidType>(fnType->getReturnType())
-            ? nullptr
-            : lowerToDebugType(fnType->getReturnType());
-    llvm::SmallVector<SpirvDebugInstruction *, 4> params;
-    for (const auto *paramType : fnType->getParamTypes())
-      params.push_back(lowerToDebugType(paramType));
+    SpirvDebugType *returnType = nullptr;
+    if (!isa<VoidType>(fnType->getReturnType())) {
+      auto *loweredRetTy = lowerToDebugType(fnType->getReturnType());
+      returnType = dyn_cast<SpirvDebugType>(loweredRetTy);
+      assert(returnType && "Function return type info must be SpirvDebugType");
+    }
+    llvm::SmallVector<SpirvDebugType *, 4> params;
+    for (const auto *paramType : fnType->getParamTypes()) {
+      params.push_back(dyn_cast<SpirvDebugType>(lowerToDebugType(paramType)));
+    }
     // TODO: Add mechanism to properly calculate the flags.
     // The info needed probably resides in clang::FunctionDecl.
     // This info can either be stored in the SpirvFunction class. Or,
