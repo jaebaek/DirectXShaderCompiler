@@ -300,7 +300,14 @@ bool DebugTypeVisitor::visitInstruction(SpirvInstruction *instr) {
       const SpirvType *spirvType = debugInstr->getDebugSpirvType();
       if (spirvType) {
         SpirvDebugInstruction *debugType = lowerToDebugType(spirvType);
-        debugInstr->setDebugType(debugType);
+        if (auto *var = dyn_cast<SpirvDebugGlobalVariable>(debugInstr)) {
+          var->setDebugType(debugType);
+        } else if (auto *var = dyn_cast<SpirvDebugLocalVariable>(debugInstr)) {
+          var->setDebugType(debugType);
+        } else {
+          llvm_unreachable("Debug instruction must be DebugGlobalVariable or "
+                           "DebugLocalVariable");
+        }
       }
     }
     if (auto *debugFunction = dyn_cast<SpirvDebugFunction>(debugInstr)) {
@@ -308,7 +315,7 @@ bool DebugTypeVisitor::visitInstruction(SpirvInstruction *instr) {
           debugFunction->getSpirvFunction()->getFunctionType();
       if (spirvType) {
         SpirvDebugInstruction *debugType = lowerToDebugType(spirvType);
-        debugInstr->setDebugType(debugType);
+        debugFunction->setDebugType(debugType);
       }
     }
   }

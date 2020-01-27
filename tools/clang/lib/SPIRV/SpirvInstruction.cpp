@@ -783,7 +783,7 @@ SpirvDebugInstruction::SpirvDebugInstruction(Kind kind, uint32_t opcode)
     : SpirvInstruction(kind, spv::Op::OpExtInst,
                        /*result type */ {},
                        /*SourceLocation*/ {}),
-      debugOpcode(opcode), debugType(nullptr), instructionSet(nullptr) {}
+      debugOpcode(opcode), instructionSet(nullptr) {}
 
 SpirvDebugSource::SpirvDebugSource(llvm::StringRef f, llvm::StringRef t)
     : SpirvDebugInstruction(IK_DebugSource, /*opcode*/ 35u), file(f), text(t) {}
@@ -801,7 +801,7 @@ SpirvDebugFunction::SpirvDebugFunction(
     uint32_t bodyLine, SpirvFunction *func)
     : SpirvDebugInstruction(IK_DebugFunction, /*opcode*/ 20u), source(src),
       fnLine(fline), fnColumn(fcol), parentScope(parent), linkageName(linkName),
-      flags(flags_), scopeLine(bodyLine), fn(func) {
+      flags(flags_), scopeLine(bodyLine), fn(func), debugType(nullptr) {
   debugName = name;
 }
 
@@ -811,7 +811,7 @@ SpirvDebugLocalVariable::SpirvDebugLocalVariable(
     uint32_t flags_, llvm::Optional<uint32_t> argNumber_)
     : SpirvDebugInstruction(IK_DebugLocalVariable, /*opcode*/ 26u), source(src),
       line(lineNumber), column(colNumber), parentScope(parent), flags(flags_),
-      argNumber(argNumber_) {
+      argNumber(argNumber_), debugType(nullptr) {
   debugName = varName;
   setDebugQualType(debugQualType_);
 }
@@ -824,7 +824,7 @@ SpirvDebugGlobalVariable::SpirvDebugGlobalVariable(
     : SpirvDebugInstruction(IK_DebugGlobalVariable, /*opcode*/ 18u),
       source(src), line(line_), column(column_), parentScope(parent),
       linkageName(linkageName_), var(var_), flags(flags_),
-      staticMemberDebugType(staticMemberDebugType_) {
+      staticMemberDebugType(staticMemberDebugType_), debugType(nullptr) {
   debugName = varName;
 }
 

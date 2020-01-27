@@ -1798,13 +1798,11 @@ public:
            inst->getKind() <= IK_DebugTypeMember;
   }
 
-  void setDebugType(SpirvDebugInstruction *type) { debugType = type; }
   void setInstructionSet(SpirvExtInstImport *set) { instructionSet = set; }
   SpirvExtInstImport *getInstructionSet() const { return instructionSet; }
   uint32_t getDebugOpcode() const { return debugOpcode; }
   QualType getDebugQualType() const { return debugQualType; }
   const SpirvType *getDebugSpirvType() const { return debugSpirvType; }
-  SpirvDebugInstruction *getDebugType() const { return debugType; }
   void setDebugQualType(QualType type) { debugQualType = type; }
   void setDebugSpirvType(const SpirvType *type) { debugSpirvType = type; }
 
@@ -1821,11 +1819,6 @@ private:
 
   QualType debugQualType;
   const SpirvType *debugSpirvType;
-
-  // The constructor for SpirvDebugInstruction sets the debug type to nullptr.
-  // A type lowering IMR pass will set debug types for all debug instructions
-  // that do contain a debug type.
-  SpirvDebugInstruction *debugType;
 
   // The pointer to the debug info extended instruction set.
   // This is not required by the constructor, and can be set via any IMR pass.
@@ -1896,6 +1889,9 @@ public:
   uint32_t getScopeLine() const { return scopeLine; }
   SpirvFunction *getSpirvFunction() const { return fn; }
 
+  void setDebugType(SpirvDebugInstruction *type) { debugType = type; }
+  SpirvDebugInstruction *getDebugType() const { return debugType; }
+
 private:
   SpirvDebugSource *source;
   // Source line number at which the function appears
@@ -1911,6 +1907,11 @@ private:
   uint32_t scopeLine;
   // The function to which this debug instruction belongs
   SpirvFunction *fn;
+
+  // The constructor for SpirvDebugFunction sets the debug type to nullptr.
+  // A type lowering IMR pass will set debug types for all debug instructions
+  // that do contain a debug type.
+  SpirvDebugInstruction *debugType;
 };
 
 class SpirvDebugLocalVariable : public SpirvDebugInstruction {
@@ -1933,6 +1934,9 @@ public:
   uint32_t getFlags() const { return flags; }
   llvm::Optional<uint32_t> getArgNumber() const { return argNumber; }
 
+  void setDebugType(SpirvDebugInstruction *type) { debugType = type; }
+  SpirvDebugInstruction *getDebugType() const { return debugType; }
+
 private:
   SpirvDebugSource *source;
   uint32_t line;
@@ -1941,6 +1945,11 @@ private:
   // TODO: Replace this with an enum, when it is available in SPIRV-Headers
   uint32_t flags;
   llvm::Optional<uint32_t> argNumber;
+
+  // The constructor sets the debug type to nullptr.
+  // A type lowering IMR pass will set debug types for all debug instructions
+  // that do contain a debug type.
+  SpirvDebugInstruction *debugType;
 };
 
 class SpirvDebugGlobalVariable : public SpirvDebugInstruction {
@@ -1959,6 +1968,9 @@ public:
 
   SpirvDebugInstruction *getParent() const override { return parentScope; }
 
+  void setDebugType(SpirvDebugInstruction *type) { debugType = type; }
+  SpirvDebugInstruction *getDebugType() const { return debugType; }
+
 private:
   SpirvDebugSource *source;
   uint32_t line;
@@ -1969,6 +1981,11 @@ private:
   // TODO: Replace this with an enum, when it is available in SPIRV-Headers
   uint32_t flags;
   llvm::Optional<SpirvInstruction *> staticMemberDebugType;
+
+  // The constructor sets the debug type to nullptr.
+  // A type lowering IMR pass will set debug types for all debug instructions
+  // that do contain a debug type.
+  SpirvDebugInstruction *debugType;
 };
 
 class SpirvDebugOperation : public SpirvDebugInstruction {
