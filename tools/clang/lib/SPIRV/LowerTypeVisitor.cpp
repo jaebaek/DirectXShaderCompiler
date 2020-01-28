@@ -36,19 +36,6 @@ inline uint32_t roundToPow2(uint32_t val, uint32_t pow2) {
 namespace clang {
 namespace spirv {
 
-bool LowerTypeVisitor::visit(SpirvModule *module, Phase phase) {
-  if (phase == Phase::Done) {
-    // When the processing for all types is done, we need to take all the
-    // debug composite types in the context and add their SPIR-V instructions
-    // to the SPIR-V module.
-    for (auto typePair : debugTypeComposite) {
-      module->addDebugInfo(typePair.second);
-    }
-  }
-
-  return true;
-}
-
 bool LowerTypeVisitor::visit(SpirvFunction *fn, Phase phase) {
   if (phase == Visitor::Phase::Init) {
     // Lower the function return type.
@@ -932,17 +919,17 @@ SpirvDebugTypeComposite *LowerTypeVisitor::lowerDebugTypeComposite(
           /* size */ 0,
           /* flags */ isPrivate ? 2u : 3u, tag));
 
+  // If we already visited this composite type and its members,
+  // we should skip it.
+  auto &members = dbgTyComposite->getMembers();
+  if (!members.empty())
+    return dbgTyComposite;
+
   dbgTyComposite->setAstResultType(astContext.VoidTy);
   dbgTyComposite->setResultType(spvContext.getVoidType());
   dbgTyComposite->setInstructionSet(debugExtInstSet);
 
   if (isResourceType)
-    return dbgTyComposite;
-
-  // If we already visited this composite type and its members,
-  // we should skip it.
-  auto &members = dbgTyComposite->getMembers();
-  if (!members.empty())
     return dbgTyComposite;
 
   uint32_t fieldIdx = 0;
@@ -956,7 +943,6 @@ SpirvDebugTypeComposite *LowerTypeVisitor::lowerDebugTypeComposite(
 
     // Skip "this" object.
     if (isa<CXXRecordDecl>(memberDecl)) {
-      ++fieldIdx;
       continue;
     }
 

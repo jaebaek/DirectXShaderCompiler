@@ -29,7 +29,7 @@ public:
         alignmentCalc(astCtx, opts), debugExtInstSet(debugExt) {}
 
   // Visiting different SPIR-V constructs.
-  bool visit(SpirvModule *, Phase);
+  bool visit(SpirvModule *, Phase) { return true; }
   bool visit(SpirvFunction *, Phase);
   bool visit(SpirvBasicBlock *, Phase) { return true; }
 

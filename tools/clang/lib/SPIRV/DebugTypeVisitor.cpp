@@ -20,13 +20,41 @@ namespace clang {
 namespace spirv {
 
 SpirvDebugInstruction *
-DebugTypeVisitor::lowerToDebugTypeEnum(const StructType *type) {
-  return nullptr;
-}
-
-SpirvDebugInstruction *
 DebugTypeVisitor::lowerToDebugTypeComposite(const StructType *type) {
-  return nullptr;
+  // DebugTypeComposite is already lowered by LowerTypeVisitor,
+  // but it is not completely lowered.
+  // We have to update member information including offset and size.
+  auto *instr =
+      dyn_cast<SpirvDebugTypeComposite>(spvContext.getDebugTypeComposite(type));
+  assert(instr && "StructType was not lowered by LowerTypeVisitor");
+  if (instr->getFullyLowered())
+    return instr;
+
+  uint32_t sizeInBits = 0;
+  uint32_t offsetInBits = 0;
+  auto &members = instr->getMembers();
+  for (auto *member : members) {
+    auto *debugMember = dyn_cast<SpirvDebugTypeMember>(member);
+    if (!debugMember)
+      continue;
+
+    SpirvDebugType *memberTy =
+        dyn_cast<SpirvDebugType>(lowerToDebugType(debugMember->getSpirvType()));
+    debugMember->setType(memberTy);
+
+    uint32_t memberSizeInBits = memberTy->getSizeInBits();
+    uint32_t memberOffset = debugMember->getOffset();
+    if (memberOffset == UINT32_MAX)
+      memberOffset = offsetInBits;
+    debugMember->updateOffsetAndSize(memberOffset, memberSizeInBits);
+
+    offsetInBits = memberOffset + memberSizeInBits;
+    if (sizeInBits < offsetInBits)
+      sizeInBits = offsetInBits;
+  }
+  instr->setSizeInBits(sizeInBits);
+  instr->setFullyLowered();
+  return instr;
 }
 
 SpirvDebugInstruction *
@@ -90,13 +118,7 @@ DebugTypeVisitor::lowerToDebugType(const SpirvType *spirvType) {
   }
   case SpirvType::TK_Struct: {
     const auto *structType = dyn_cast<StructType>(spirvType);
-    const auto *decl = structType->getDecl();
-    if (decl) {
-      if (decl->isEnum())
-        debugType = lowerToDebugTypeEnum(structType);
-      else
-        debugType = lowerToDebugTypeComposite(structType);
-    }
+    debugType = lowerToDebugTypeComposite(structType);
     break;
   }
   // TODO: Add DebugTypeComposite for class and union.
@@ -160,36 +182,6 @@ DebugTypeVisitor::lowerToDebugType(const SpirvType *spirvType) {
   return debugType;
 }
 
-bool DebugTypeVisitor::visitInstruction(SpirvDebugTypeComposite *instr) {
-  auto &members = instr->getMembers();
-  if (!members.empty())
-    return true;
-
-  uint32_t sizeInBits = 0;
-  uint32_t offsetInBits = 0;
-  for (auto *member : members) {
-    auto *debugMember = dyn_cast<SpirvDebugTypeMember>(member);
-    if (!debugMember)
-      continue;
-
-    SpirvDebugType *memberTy =
-        dyn_cast<SpirvDebugType>(lowerToDebugType(debugMember->getSpirvType()));
-    debugMember->setType(memberTy);
-
-    uint32_t memberSizeInBits = memberTy->getSizeInBits();
-    uint32_t memberOffset = debugMember->getOffset();
-    if (memberOffset == UINT32_MAX)
-      memberOffset = offsetInBits;
-    debugMember->updateOffsetAndSize(memberOffset, memberSizeInBits);
-
-    offsetInBits = memberOffset + memberSizeInBits;
-    if (sizeInBits < offsetInBits)
-      sizeInBits = offsetInBits;
-  }
-  instr->setSizeInBits(sizeInBits);
-  return true;
-}
-
 bool DebugTypeVisitor::visitInstruction(SpirvInstruction *instr) {
   if (auto *debugInstr = dyn_cast<SpirvDebugInstruction>(instr)) {
     // Set the result type of debug instructions to OpTypeVoid.
@@ -243,10 +235,6 @@ bool DebugTypeVisitor::visit(SpirvModule *module, Phase phase) {
     // Note that we don't add debug types to the module when we create them, as
     // there could be duplicates.
     for (const auto typePair : spvContext.getDebugTypes()) {
-      // SpirvDebugTypeComposite instructions are already added in
-      // LowerTypeVisitor.
-      if (isa<SpirvDebugTypeComposite>(typePair.second))
-        continue;
       module->addDebugInfo(typePair.second);
     }
     for (auto *type : spvContext.getMemberTypes()) {

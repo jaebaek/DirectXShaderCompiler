@@ -2341,6 +2341,9 @@ public:
   void setSizeInBits(uint32_t size_) { size = size_; }
   uint32_t getSizeInBits() const override { return size; }
 
+  void setFullyLowered() { fullyLowered = true; }
+  bool getFullyLowered() const { return fullyLowered; }
+
 private:
   std::string name;         //< Name of the member as it appears in the program
   SpirvDebugSource *source; //< DebugSource containing this type
@@ -2367,6 +2370,11 @@ private:
   // DebugTypeInheritance. Since DebugFunction may be a member, we cannot use a
   // vector of SpirvDebugType.
   llvm::SmallVector<SpirvDebugInstruction *, 4> members;
+
+  // It is first lowered by LowerTypeVisitor and then lowered by
+  // DebugTypeVisitor. We set fullyLowered true after it is lowered
+  // by DebugTypeVisitor.
+  bool fullyLowered;
 };
 
 #undef DECLARE_INVOKE_VISITOR_FOR_CLASS

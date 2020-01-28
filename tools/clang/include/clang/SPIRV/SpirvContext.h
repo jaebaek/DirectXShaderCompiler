@@ -179,6 +179,8 @@ public:
                         llvm::StringRef linkageName, uint32_t size,
                         uint32_t flags, uint32_t tag);
 
+  SpirvDebugInstruction *getDebugTypeComposite(const SpirvType *spirvType);
+
   SpirvDebugInstruction *getDebugTypeArray(const SpirvType *spirvType,
                                            SpirvDebugInstruction *elemType,
                                            llvm::ArrayRef<uint32_t> elemCount);

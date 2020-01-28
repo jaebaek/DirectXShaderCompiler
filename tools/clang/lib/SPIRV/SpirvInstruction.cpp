@@ -905,7 +905,8 @@ SpirvDebugTypeComposite::SpirvDebugTypeComposite(
     uint32_t tag_)
     : SpirvDebugType(IK_DebugTypeComposite, /*opcode*/ 10u), name(name_),
       source(source_), line(line_), column(column_), parent(parent_),
-      linkageName(linkageName_), size(size_), debugFlags(flags_), tag(tag_) {}
+      linkageName(linkageName_), size(size_), debugFlags(flags_), tag(tag_),
+      fullyLowered(false) {}
 
 } // namespace spirv
 } // namespace clang
