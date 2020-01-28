@@ -11,6 +11,7 @@
 #include "dxc/Support/SPIRVOptions.h"
 #include "spirv/unified1/GLSL.std.450.h"
 #include "spirv/unified1/spirv.hpp11"
+#include "clang/AST/APValue.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/APFloat.h"
@@ -2257,14 +2258,18 @@ private:
 /// type.
 class SpirvDebugTypeMember : public SpirvDebugType {
 public:
-  SpirvDebugTypeMember(llvm::StringRef name, SpirvDebugType *type,
+  SpirvDebugTypeMember(llvm::StringRef name, const SpirvType *type,
                        SpirvDebugSource *source, uint32_t line, uint32_t column,
-                       SpirvDebugInstruction *parent, uint32_t offset,
-                       uint32_t size, uint32_t flags,
-                       SpirvInstruction *value = nullptr);
+                       SpirvDebugInstruction *parent, uint32_t flags,
+                       uint32_t offset, const APValue *value = nullptr);
 
   static bool classof(const SpirvInstruction *inst) {
     return inst->getKind() == IK_DebugTypeMember;
+  }
+
+  void updateOffsetAndSize(uint32_t offset_, uint32_t size_) {
+    offset = offset_;
+    size = size_;
   }
 
   bool invokeVisitor(Visitor *v) override;
@@ -2273,6 +2278,7 @@ public:
 
   llvm::StringRef getName() const { return name; }
 
+  void setType(SpirvDebugType *type_) { type = type_; }
   SpirvDebugType *getType() const { return type; }
   SpirvDebugSource *getSource() const { return source; }
   uint32_t getLine() const { return line; }
@@ -2280,7 +2286,9 @@ public:
   uint32_t getOffset() const { return offset; }
   uint32_t getDebugFlags() const { return debugFlags; }
   uint32_t getSizeInBits() const override { return size; }
-  SpirvInstruction *getValue() const { return value; }
+  const APValue *getValue() const { return value; }
+
+  const SpirvType *getSpirvType() const { return spvType; }
 
 private:
   std::string name;         //< Name of the member as it appears in the program
@@ -2299,7 +2307,9 @@ private:
   // TODO: Replace uint32_t with enum in the SPIRV-Headers once it is
   // available.
   uint32_t debugFlags;
-  SpirvInstruction *value; //< Value (if static member)
+  const APValue *value; //< Value (if static member)
+
+  const SpirvType *spvType;
 };
 
 class SpirvDebugTypeComposite : public SpirvDebugType {

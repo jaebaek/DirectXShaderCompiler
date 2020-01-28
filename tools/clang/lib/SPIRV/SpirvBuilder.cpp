@@ -1137,7 +1137,9 @@ void SpirvBuilder::setCurrentLexicalScope(SpirvDebugInstruction *inst) {
 std::vector<uint32_t> SpirvBuilder::takeModule() {
   // Run necessary visitor passes first
   LiteralTypeVisitor literalTypeVisitor(astContext, context, spirvOptions);
-  LowerTypeVisitor lowerTypeVisitor(astContext, context, spirvOptions);
+  LowerTypeVisitor lowerTypeVisitor(
+      astContext, context, spirvOptions,
+      spirvOptions.debugInfoRich ? getOpenCLDebugInfoExtInstSet() : nullptr);
   DebugTypeVisitor debugTypeVisitor(astContext, context, spirvOptions, *this);
   CapabilityVisitor capabilityVisitor(astContext, context, spirvOptions, *this);
   RelaxedPrecisionVisitor relaxedPrecisionVisitor(context, spirvOptions);

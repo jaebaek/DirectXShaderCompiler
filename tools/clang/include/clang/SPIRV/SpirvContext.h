@@ -166,11 +166,11 @@ public:
                                            uint32_t encoding);
 
   SpirvDebugInstruction *
-  getDebugTypeMember(llvm::StringRef name, SpirvDebugType *type,
+  getDebugTypeMember(llvm::StringRef name, const SpirvType *type,
                      SpirvDebugSource *source, uint32_t line, uint32_t column,
-                     SpirvDebugInstruction *parent, uint32_t offset,
-                     uint32_t size, uint32_t flags,
-                     llvm::Optional<SpirvInstruction *> value = llvm::None);
+                     SpirvDebugInstruction *parent, uint32_t flags,
+                     uint32_t offset = UINT32_MAX,
+                     const APValue *value = nullptr);
 
   SpirvDebugInstruction *
   getDebugTypeComposite(const SpirvType *spirvType, llvm::StringRef name,

@@ -13,6 +13,7 @@
 #include "clang/AST/HlslTypes.h"
 #include "clang/SPIRV/AstTypeProbe.h"
 #include "clang/SPIRV/SpirvFunction.h"
+#include "clang/SPIRV/SpirvModule.h"
 
 namespace {
 /// Returns the :packoffset() annotation on the given decl. Returns nullptr if
@@ -34,6 +35,19 @@ inline uint32_t roundToPow2(uint32_t val, uint32_t pow2) {
 
 namespace clang {
 namespace spirv {
+
+bool LowerTypeVisitor::visit(SpirvModule *module, Phase phase) {
+  if (phase == Phase::Done) {
+    // When the processing for all types is done, we need to take all the
+    // debug composite types in the context and add their SPIR-V instructions
+    // to the SPIR-V module.
+    for (auto typePair : debugTypeComposite) {
+      module->addDebugInfo(typePair.second);
+    }
+  }
+
+  return true;
+}
 
 bool LowerTypeVisitor::visit(SpirvFunction *fn, Phase phase) {
   if (phase == Visitor::Phase::Init) {
@@ -377,8 +391,15 @@ const SpirvType *LowerTypeVisitor::lowerType(QualType type,
     // (ClassTemplateSpecializationDecl is a subclass of CXXRecordDecl, which
     // is then a subclass of RecordDecl.) So we need to check them before
     // checking the general struct type.
-    if (const auto *spvType = lowerResourceType(type, rule, srcLoc))
+    if (const auto *spvType = lowerResourceType(type, rule, srcLoc)) {
+      if (debugExtInstSet &&
+          debugTypeComposite.find(decl) == debugTypeComposite.end()) {
+        llvm::SmallVector<StructType::FieldInfo, 4> fields;
+        debugTypeComposite[decl] =
+            lowerDebugTypeComposite(structType, spvType, fields, true);
+      }
       return spvType;
+    }
 
     // Collect all fields' information.
     llvm::SmallVector<HybridStructType::FieldInfo, 8> fields;
@@ -404,8 +425,15 @@ const SpirvType *LowerTypeVisitor::lowerType(QualType type,
 
     auto loweredFields = populateLayoutInformation(fields, rule);
 
-    return spvContext.getStructType(loweredFields, decl->getName(), false,
-                                    StructInterfaceType::InternalStorage, decl);
+    const auto *spvType =
+        spvContext.getStructType(loweredFields, decl->getName(), false,
+                                 StructInterfaceType::InternalStorage, decl);
+    if (debugExtInstSet &&
+        debugTypeComposite.find(decl) == debugTypeComposite.end()) {
+      debugTypeComposite[decl] =
+          lowerDebugTypeComposite(structType, spvType, loweredFields, false);
+    }
+    return spvType;
   }
 
   // Array type
@@ -856,6 +884,118 @@ LowerTypeVisitor::populateLayoutInformation(
   }
 
   return result;
+}
+
+SpirvDebugTypeComposite *LowerTypeVisitor::lowerDebugTypeComposite(
+    const RecordType *structType, const SpirvType *type,
+    llvm::SmallVector<StructType::FieldInfo, 4> &fields, bool isResourceType) {
+  const auto *decl = structType->getDecl();
+  const SourceLocation &loc = decl->getLocStart();
+  const auto &sm = astContext.getSourceManager();
+  StringRef file = sm.getPresumedLoc(loc).getFilename();
+  uint32_t line = sm.getPresumedLineNumber(loc);
+  uint32_t column = sm.getPresumedColumnNumber(loc);
+  StringRef linkageName = type->getName();
+
+  // TODO: Update linkageName using astContext.createMangleContext().
+  //
+  // Currently, the following code fails because it is not a
+  // FunctionDecl nor VarDecl. I guess we should mangle a RecordDecl
+  // as well.
+  //
+  // std::string s;
+  // llvm::raw_string_ostream stream(s);
+  // mangleCtx->mangleName(decl, stream);
+
+  uint32_t tag = 1;
+  if (decl->isStruct())
+    tag = 1;
+  else if (decl->isClass())
+    tag = 0;
+  else if (decl->isUnion())
+    tag = 2;
+  else
+    assert(!"DebugTypeComposite must be a struct, class, or union.");
+
+  bool isPrivate = decl->isModulePrivate();
+
+  std::string name = type->getName();
+  if (isResourceType)
+    name = "@" + name;
+
+  // TODO: Update parent, size, and flags information correctly.
+  auto &debugInfo = spvContext.getDebugInfo()[file];
+  auto *dbgTyComposite =
+      dyn_cast<SpirvDebugTypeComposite>(spvContext.getDebugTypeComposite(
+          type, name, debugInfo.source, line, column,
+          /* parent */ debugInfo.compilationUnit, linkageName,
+          /* size */ 0,
+          /* flags */ isPrivate ? 2u : 3u, tag));
+
+  dbgTyComposite->setAstResultType(astContext.VoidTy);
+  dbgTyComposite->setResultType(spvContext.getVoidType());
+  dbgTyComposite->setInstructionSet(debugExtInstSet);
+
+  if (isResourceType)
+    return dbgTyComposite;
+
+  // If we already visited this composite type and its members,
+  // we should skip it.
+  auto &members = dbgTyComposite->getMembers();
+  if (!members.empty())
+    return dbgTyComposite;
+
+  uint32_t fieldIdx = 0;
+  for (auto &memberDecl : decl->decls()) {
+    if (const auto *cxxMethodDecl = dyn_cast<CXXMethodDecl>(memberDecl)) {
+      auto *fn = spvContext.findFunctionInfo(cxxMethodDecl);
+      assert(fn && "DebugFunction for method does not exist");
+      members.push_back(fn);
+      continue;
+    }
+
+    // Skip "this" object.
+    if (isa<CXXRecordDecl>(memberDecl)) {
+      ++fieldIdx;
+      continue;
+    }
+
+    assert(isa<FieldDecl>(memberDecl) &&
+           "Decl of member must be CXXMethodDecl, CXXRecordDecl, or FieldDecl");
+
+    const SourceLocation &fieldLoc = memberDecl->getLocStart();
+    const StringRef fieldFile = sm.getPresumedLoc(fieldLoc).getFilename();
+    const uint32_t fieldLine = sm.getPresumedLineNumber(fieldLoc);
+    const uint32_t fieldColumn = sm.getPresumedColumnNumber(fieldLoc);
+
+    const APValue *value = nullptr;
+    if (const auto *varDecl = dyn_cast<VarDecl>(memberDecl)) {
+      if (const auto *val = varDecl->evaluateValue()) {
+        value = val;
+      }
+    }
+
+    uint32_t offset = UINT32_MAX;
+    if (fields[fieldIdx].offset.hasValue())
+      offset = *fields[fieldIdx].offset;
+
+    // TODO: Replace 2u and 3u with valid flags when debug info extension is
+    // placed in SPIRV-Header.
+    auto *debugInstr =
+        dyn_cast<SpirvDebugInstruction>(spvContext.getDebugTypeMember(
+            dyn_cast<FieldDecl>(memberDecl)->getName(), fields[fieldIdx].type,
+            spvContext.getDebugInfo()[fieldFile].source, fieldLine, fieldColumn,
+            dbgTyComposite, memberDecl->isModulePrivate() ? 2u : 3u, offset,
+            value));
+    assert(debugInstr && "We expect SpirvDebugInstruction for DebugTypeMember");
+    debugInstr->setAstResultType(astContext.VoidTy);
+    debugInstr->setResultType(spvContext.getVoidType());
+    debugInstr->setInstructionSet(debugExtInstSet);
+    members.push_back(debugInstr);
+
+    ++fieldIdx;
+  }
+  return dbgTyComposite;
 }
 
 } // namespace spirv

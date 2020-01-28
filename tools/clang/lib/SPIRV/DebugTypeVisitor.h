@@ -42,6 +42,11 @@ public:
   /// regardless of their polymorphism.
   bool visitInstruction(SpirvInstruction *);
 
+  /// We need special handling for DebugTypeComposite because it is
+  /// lowered by LowerTypeVisitor and it is not completely lowered.
+  /// We have to update member information including offsets and sizes.
+  bool visitInstruction(SpirvDebugTypeComposite *instr);
+
 private:
   /// Emits error to the diagnostic engine associated with this visitor.
   template <unsigned N>
