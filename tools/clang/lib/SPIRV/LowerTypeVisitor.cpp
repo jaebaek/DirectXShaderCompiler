@@ -414,7 +414,7 @@ const SpirvType *LowerTypeVisitor::lowerType(QualType type,
 
     const auto *spvType =
         spvContext.getStructType(loweredFields, decl->getName(), false,
-                                 StructInterfaceType::InternalStorage, decl);
+                                 StructInterfaceType::InternalStorage);
     if (debugExtInstSet &&
         debugTypeComposite.find(decl) == debugTypeComposite.end()) {
       debugTypeComposite[decl] =
@@ -864,11 +864,8 @@ LowerTypeVisitor::populateLayoutInformation(
   }
 
   // Re-order the sorted fields back to their original order.
-  for (const auto &field : fields) {
-    auto &f = loweredFields[fieldToIndexMap[&field]];
-    f.decl = field.decl;
-    result.push_back(f);
-  }
+  for (const auto &field : fields)
+    result.push_back(loweredFields[fieldToIndexMap[&field]]);
 
   return result;
 }
@@ -879,7 +876,6 @@ SpirvDebugTypeComposite *LowerTypeVisitor::lowerDebugTypeComposite(
   const auto *decl = structType->getDecl();
   const SourceLocation &loc = decl->getLocStart();
   const auto &sm = astContext.getSourceManager();
-  StringRef file = sm.getPresumedLoc(loc).getFilename();
   uint32_t line = sm.getPresumedLineNumber(loc);
   uint32_t column = sm.getPresumedColumnNumber(loc);
   StringRef linkageName = type->getName();
@@ -911,11 +907,14 @@ SpirvDebugTypeComposite *LowerTypeVisitor::lowerDebugTypeComposite(
     name = "@" + name;
 
   // TODO: Update parent, size, and flags information correctly.
-  auto &debugInfo = spvContext.getDebugInfo()[file];
+  RichDebugInfo* debugInfo = &spvContext.getDebugInfo().begin()->second;
+  const char *file = sm.getPresumedLoc(loc).getFilename();
+  if (file)
+    debugInfo = &spvContext.getDebugInfo()[file];
   auto *dbgTyComposite =
       dyn_cast<SpirvDebugTypeComposite>(spvContext.getDebugTypeComposite(
-          type, name, debugInfo.source, line, column,
-          /* parent */ debugInfo.compilationUnit, linkageName,
+          type, name, debugInfo->source, line, column,
+          /* parent */ debugInfo->compilationUnit, linkageName,
           /* size */ 0,
           /* flags */ isPrivate ? 2u : 3u, tag));
 

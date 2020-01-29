@@ -182,8 +182,7 @@ SpirvContext::getRuntimeArrayType(const SpirvType *elemType,
 const StructType *
 SpirvContext::getStructType(llvm::ArrayRef<StructType::FieldInfo> fields,
                             llvm::StringRef name, bool isReadOnly,
-                            StructInterfaceType interfaceType,
-                            llvm::Optional<const RecordDecl *> decl) {
+                            StructInterfaceType interfaceType) {
   // We are creating a temporary struct type here for querying whether the
   // same type was already created. It is a little bit costly, but we can
   // avoid allocating directly from the bump pointer allocator, from which
@@ -199,7 +198,7 @@ SpirvContext::getStructType(llvm::ArrayRef<StructType::FieldInfo> fields,
     return *found;
 
   structTypes.push_back(
-      new (this) StructType(fields, name, isReadOnly, interfaceType, decl));
+      new (this) StructType(fields, name, isReadOnly, interfaceType));
 
   return structTypes.back();
 }

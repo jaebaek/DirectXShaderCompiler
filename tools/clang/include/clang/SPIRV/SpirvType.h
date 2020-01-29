@@ -296,7 +296,7 @@ public:
         : type(type_), name(name_), offset(offset_),
           matrixStride(matrixStride_), isRowMajor(isRowMajor_),
           isRelaxedPrecision(relaxedPrecision), isPrecise(precise),
-          size(llvm::None), decl(nullptr) {
+          size(llvm::None) {
       // A StructType may not contain any hybrid types.
       assert(!isa<HybridType>(type_));
     }
@@ -319,14 +319,11 @@ public:
     bool isPrecise;
     // The integer size in byte for this field.
     llvm::Optional<uint32_t> size;
-    // Used to get source, line, column debug information.
-    const FieldDecl *decl;
   };
 
   StructType(
       llvm::ArrayRef<FieldInfo> fields, llvm::StringRef name, bool isReadOnly,
-      StructInterfaceType interfaceType = StructInterfaceType::InternalStorage,
-      llvm::Optional<const RecordDecl *> decl = llvm::None);
+      StructInterfaceType interfaceType = StructInterfaceType::InternalStorage);
 
   static bool classof(const SpirvType *t) { return t->getKind() == TK_Struct; }
 
@@ -336,8 +333,6 @@ public:
   StructInterfaceType getInterfaceType() const { return interfaceType; }
 
   bool operator==(const StructType &that) const;
-
-  const RecordDecl *getDecl() const { return decl; }
 
 private:
   // Reflection is heavily used in graphics pipelines. Reflection relies on
@@ -351,9 +346,6 @@ private:
   // If this structure is a uniform buffer shader-interface, it will be
   // decorated with 'Block'.
   StructInterfaceType interfaceType;
-
-  // Used to get source, line, column debug information.
-  const RecordDecl *decl;
 };
 
 /// Represents a SPIR-V pointer type.
@@ -435,7 +427,7 @@ public:
               hlsl::ConstantPacking *packOffset = nullptr,
               const hlsl::RegisterAssignment *regC = nullptr,
               bool precise = false)
-        : astType(astType_), name(name_), decl(decl_), vkOffsetAttr(offset),
+        : astType(astType_), name(name_), vkOffsetAttr(offset),
           packOffsetAttr(packOffset), registerC(regC), isPrecise(precise) {}
 
     // The field's type.
@@ -450,8 +442,6 @@ public:
     const hlsl::RegisterAssignment *registerC;
     // Whether this field is marked as 'precise'.
     bool isPrecise;
-    // Used to get source, line, column debug information.
-    const FieldDecl *decl;
   };
 
   HybridStructType(

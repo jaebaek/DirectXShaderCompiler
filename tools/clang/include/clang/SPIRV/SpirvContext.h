@@ -232,8 +232,7 @@ public:
   const StructType *getStructType(
       llvm::ArrayRef<StructType::FieldInfo> fields, llvm::StringRef name,
       bool isReadOnly = false,
-      StructInterfaceType interfaceType = StructInterfaceType::InternalStorage,
-      llvm::Optional<const RecordDecl *> decl = llvm::None);
+      StructInterfaceType interfaceType = StructInterfaceType::InternalStorage);
 
   void saveFuntionInfo(const CXXMethodDecl *decl, SpirvDebugFunction *fn) {
     structDeclToFnList[decl] = fn;

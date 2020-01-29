@@ -1257,11 +1257,6 @@ bool EmitVisitor::visit(SpirvDebugTypeMember *inst) {
   curInst.push_back(offset);
   curInst.push_back(size);
   curInst.push_back(inst->getDebugFlags());
-  /*
-  if (auto *val = inst->getValue()) {
-    curInst.push_back(getOrAssignResultId<SpirvInstruction>(val));
-  }
-  */
   finalizeInstruction(&richDebugInfo);
   return true;
 }
