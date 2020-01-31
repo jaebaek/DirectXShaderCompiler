@@ -362,5 +362,31 @@ SpirvContext::getDebugTypeFunction(const SpirvType *spirvType, uint32_t flags,
   return debugType;
 }
 
+SpirvDebugInstruction *
+SpirvContext::getDebugTypeTemplate(const SpirvType *spirvType,
+                                   SpirvDebugInstruction *target) {
+  // Reuse existing debug type if possible.
+  if (debugTypes.find(spirvType) != debugTypes.end())
+    return debugTypes[spirvType];
+
+  auto *debugType = new (this) SpirvDebugTypeTemplate(target);
+  debugTypes[spirvType] = debugType;
+  return debugType;
+}
+
+SpirvDebugInstruction *SpirvContext::getDebugTypeTemplateParameter(
+    const SpirvType *spirvType, llvm::StringRef name,
+    SpirvDebugType *actualType, SpirvConstant *value, SpirvDebugSource *source,
+    uint32_t line, uint32_t column) {
+  // Reuse existing debug type if possible.
+  if (debugTypes.find(spirvType) != debugTypes.end())
+    return debugTypes[spirvType];
+
+  auto *debugType = new (this) SpirvDebugTypeTemplateParameter(
+      name, actualType, value, source, line, column);
+  debugTypes[spirvType] = debugType;
+  return debugType;
+}
+
 } // end namespace spirv
 } // end namespace clang

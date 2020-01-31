@@ -137,6 +137,8 @@ public:
     IK_DebugTypeFunction,
     IK_DebugTypeComposite,
     IK_DebugTypeMember,
+    IK_DebugTypeTemplate,
+    IK_DebugTypeTemplateParameter,
   };
 
   virtual ~SpirvInstruction() = default;
@@ -2384,6 +2386,58 @@ private:
   // DebugTypeVisitor. We set fullyLowered true after it is lowered
   // by DebugTypeVisitor.
   bool fullyLowered;
+};
+
+class SpirvDebugTypeTemplate : public SpirvDebugType {
+public:
+  SpirvDebugTypeTemplate(SpirvDebugInstruction *target);
+
+  static bool classof(const SpirvInstruction *inst) {
+    return inst->getKind() == IK_DebugTypeTemplate;
+  }
+
+  bool invokeVisitor(Visitor *v) override;
+
+  llvm::SmallVector<SpirvDebugInstruction *, 4> &getParams() { return params; }
+  SpirvDebugInstruction *getTarget() const { return target; }
+
+private:
+  // A debug instruction representing class, struct or function which has
+  // template parameter(s).
+  SpirvDebugInstruction *target;
+
+  // Debug instructions representing the template parameters for this
+  // particular instantiation. It must be DebugTypeTemplateParameter
+  // or DebugTypeTemplateTemplateParameter.
+  llvm::SmallVector<SpirvDebugInstruction *, 4> params;
+};
+
+class SpirvDebugTypeTemplateParameter : public SpirvDebugType {
+public:
+  SpirvDebugTypeTemplateParameter(llvm::StringRef name,
+                                  SpirvDebugType *actualType,
+                                  SpirvConstant *value,
+                                  SpirvDebugSource *source, uint32_t line,
+                                  uint32_t column);
+
+  static bool classof(const SpirvInstruction *inst) {
+    return inst->getKind() == IK_DebugTypeTemplateParameter;
+  }
+
+  bool invokeVisitor(Visitor *v) override;
+
+  SpirvDebugType *getActualType() const { return actualType; }
+  SpirvConstant *getValue() const { return value; }
+  SpirvDebugSource *getSource() const { return source; }
+  uint32_t getLine() const { return line; }
+  uint32_t getColumn() const { return column; }
+
+private:
+  SpirvDebugType *actualType; //< Type for type param
+  SpirvConstant *value;       //< Value. It must be null for type.
+  SpirvDebugSource *source;   //< DebugSource containing this type
+  uint32_t line;              //< Line number
+  uint32_t column;            //< Column number
 };
 
 #undef DECLARE_INVOKE_VISITOR_FOR_CLASS
