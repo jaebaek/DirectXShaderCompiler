@@ -1898,6 +1898,7 @@ public:
   SpirvDebugSource *getSource() const { return source; }
   uint32_t getLine() const { return fnLine; }
   uint32_t getColumn() const { return fnColumn; }
+  void setParent(SpirvDebugInstruction *scope) { parentScope = scope; }
   SpirvDebugInstruction *getParent() const override { return parentScope; }
   llvm::StringRef getLinkageName() const { return linkageName; }
   uint32_t getFlags() const { return flags; }

@@ -999,6 +999,7 @@ SpirvDebugTypeComposite *LowerTypeVisitor::lowerDebugTypeComposite(
     if (const auto *cxxMethodDecl = dyn_cast<CXXMethodDecl>(memberDecl)) {
       auto *fn = spvContext.findFunctionInfo(cxxMethodDecl);
       assert(fn && "DebugFunction for method does not exist");
+      fn->setParent(dbgTyComposite);
       members.push_back(fn);
       continue;
     }
