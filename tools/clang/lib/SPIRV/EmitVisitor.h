@@ -255,6 +255,7 @@ public:
   bool visit(SpirvVectorShuffle *);
   bool visit(SpirvArrayLength *);
   bool visit(SpirvRayTracingOpNV *);
+  bool visit(SpirvDebugInfoNone *);
   bool visit(SpirvDebugSource *);
   bool visit(SpirvDebugCompilationUnit *);
   bool visit(SpirvDebugLexicalBlock *);
@@ -269,6 +270,8 @@ public:
   bool visit(SpirvDebugTypeFunction *);
   bool visit(SpirvDebugTypeComposite *);
   bool visit(SpirvDebugTypeMember *);
+  bool visit(SpirvDebugTypeTemplate *);
+  bool visit(SpirvDebugTypeTemplateParameter *);
 
   // Returns the assembled binary built up in this visitor.
   std::vector<uint32_t> takeBinary();

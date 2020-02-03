@@ -19,6 +19,12 @@
 namespace clang {
 namespace spirv {
 
+void DebugTypeVisitor::setDefaultDebugInfo(SpirvDebugInstruction *instr) {
+  instr->setAstResultType(astContext.VoidTy);
+  instr->setResultType(context.getVoidType());
+  instr->setInstructionSet(spvBuilder.getOpenCLDebugInfoExtInstSet());
+}
+
 SpirvDebugInstruction *
 DebugTypeVisitor::lowerToDebugTypeComposite(const StructType *type) {
   // DebugTypeComposite is already lowered by LowerTypeVisitor,
@@ -34,9 +40,14 @@ DebugTypeVisitor::lowerToDebugTypeComposite(const StructType *type) {
       for (auto &t : tempParams) {
         t->setActualType(
             dyn_cast<SpirvDebugType>(lowerToDebugType(t->getSpirvType())));
-        if (!t->getValue())
-          t->setValue(spvBuilder.getOrCreateDebugInfoNone());
+        if (!t->getValue()) {
+          auto *debugNone = spvBuilder.getOrCreateDebugInfoNone();
+          setDefaultDebugInfo(debugNone);
+          t->setValue(debugNone);
+        }
+        setDefaultDebugInfo(t);
       }
+      setDefaultDebugInfo(tempType);
     }
   }
   // TODO: else emit error!
@@ -190,20 +201,13 @@ DebugTypeVisitor::lowerToDebugType(const SpirvType *spirvType) {
         spvContext.getDebugTypeBasic(nullptr, "Unknown", 0, 0 /*Unspecified*/);
   }
 
-  debugType->setAstResultType(astContext.VoidTy);
-  debugType->setResultType(context.getVoidType());
-  debugType->setInstructionSet(spvBuilder.getOpenCLDebugInfoExtInstSet());
+  setDefaultDebugInfo(debugType);
   return debugType;
 }
 
 bool DebugTypeVisitor::visitInstruction(SpirvInstruction *instr) {
   if (auto *debugInstr = dyn_cast<SpirvDebugInstruction>(instr)) {
-    // Set the result type of debug instructions to OpTypeVoid.
-    // According to the OpenCL.DebugInfo.100 spec, all debug instructions are
-    // OpExtInst with result type of void.
-    debugInstr->setAstResultType(astContext.VoidTy);
-    debugInstr->setResultType(spvContext.getVoidType());
-    debugInstr->setInstructionSet(spvBuilder.getOpenCLDebugInfoExtInstSet());
+    setDefaultDebugInfo(debugInstr);
 
     // The following instructions are the only debug instructions that contain a
     // debug type:

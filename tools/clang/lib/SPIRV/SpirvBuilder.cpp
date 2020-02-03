@@ -23,7 +23,8 @@ namespace spirv {
 SpirvBuilder::SpirvBuilder(ASTContext &ac, SpirvContext &ctx,
                            const SpirvCodeGenOptions &opt)
     : astContext(ac), context(ctx), module(nullptr), function(nullptr),
-      spirvOptions(opt), nullDebugExpr(nullptr), currentLexicalScope(nullptr) {
+      spirvOptions(opt), debugNone(nullptr), nullDebugExpr(nullptr),
+      currentLexicalScope(nullptr) {
   module = new (context) SpirvModule;
 }
 
