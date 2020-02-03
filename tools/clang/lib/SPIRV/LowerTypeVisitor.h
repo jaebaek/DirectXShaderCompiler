@@ -64,8 +64,10 @@ private:
                              SourceLocation);
 
   /// Lowers the given HLSL resource type into its SPIR-V type.
-  const SpirvType *lowerResourceType(QualType type, SpirvLayoutRule rule,
-                                     SourceLocation);
+  ///
+  /// Returns the lowered SpirvType and its underlying SpirvType.
+  std::pair<const SpirvType *, const SpirvType *>
+  lowerResourceType(QualType type, SpirvLayoutRule rule, SourceLocation);
 
   /// For the given sampled type, returns the corresponding image format
   /// that can be used to create an image object.
@@ -93,7 +95,9 @@ private:
 
   SpirvExtInstImport *debugExtInstSet; /// Pointer to
                                        /// OpenCLDebugInfoExtInstSet
-  llvm::DenseMap<const Decl *, SpirvDebugTypeComposite *> debugTypeComposite;
+
+  llvm::SmallSet<const Decl *, 4> visitedRecordDecl; /// A set of already
+                                                     /// visited RecordDecl
 };
 
 } // end namespace spirv

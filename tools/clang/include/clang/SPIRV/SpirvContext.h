@@ -179,7 +179,7 @@ public:
                         llvm::StringRef linkageName, uint32_t size,
                         uint32_t flags, uint32_t tag);
 
-  SpirvDebugInstruction *getDebugTypeComposite(const SpirvType *spirvType);
+  SpirvDebugInstruction *getDebugType(const SpirvType *spirvType);
 
   SpirvDebugInstruction *getDebugTypeArray(const SpirvType *spirvType,
                                            SpirvDebugInstruction *elemType,
@@ -197,10 +197,10 @@ public:
   SpirvDebugInstruction *getDebugTypeTemplate(const SpirvType *spirvType,
                                               SpirvDebugInstruction *target);
 
-  SpirvDebugInstruction *getDebugTypeTemplateParameter(
-      const SpirvType *spirvType, llvm::StringRef name,
-      SpirvDebugType *actualType, SpirvConstant *value,
-      SpirvDebugSource *source, uint32_t line, uint32_t column);
+  SpirvDebugInstruction *
+  getDebugTypeTemplateParameter(llvm::StringRef name, const SpirvType *type,
+                                SpirvConstant *value, SpirvDebugSource *source,
+                                uint32_t line, uint32_t column);
 
   llvm::MapVector<const SpirvType *, SpirvDebugType *> getDebugTypes() const {
     return debugTypes;

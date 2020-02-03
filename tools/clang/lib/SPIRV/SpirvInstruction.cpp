@@ -909,16 +909,16 @@ SpirvDebugTypeComposite::SpirvDebugTypeComposite(
     : SpirvDebugType(IK_DebugTypeComposite, /*opcode*/ 10u), name(name_),
       source(source_), line(line_), column(column_), parent(parent_),
       linkageName(linkageName_), size(size_), debugFlags(flags_), tag(tag_),
-      fullyLowered(false) {}
+      typeTemplate(nullptr), fullyLowered(false) {}
 
 SpirvDebugTypeTemplate::SpirvDebugTypeTemplate(SpirvDebugInstruction *target_)
     : SpirvDebugType(IK_DebugTypeTemplate, /*opcode*/ 14u), target(target_) {}
 
 SpirvDebugTypeTemplateParameter::SpirvDebugTypeTemplateParameter(
-    llvm::StringRef name, SpirvDebugType *actualType_, SpirvConstant *value_,
+    llvm::StringRef name, const SpirvType *type, SpirvConstant *value_,
     SpirvDebugSource *source_, uint32_t line_, uint32_t column_)
     : SpirvDebugType(IK_DebugTypeTemplateParameter, /*opcode*/ 15u),
-      actualType(actualType_), value(value_), source(source_), line(line_),
+      spvType(type), actualType(nullptr), value(value_), source(source_), line(line_),
       column(column_) {
   debugName = name;
 }

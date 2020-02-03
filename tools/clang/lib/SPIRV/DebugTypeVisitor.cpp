@@ -24,8 +24,18 @@ DebugTypeVisitor::lowerToDebugTypeComposite(const StructType *type) {
   // DebugTypeComposite is already lowered by LowerTypeVisitor,
   // but it is not completely lowered.
   // We have to update member information including offset and size.
-  auto *instr =
-      dyn_cast<SpirvDebugTypeComposite>(spvContext.getDebugTypeComposite(type));
+  auto *instr = dyn_cast<SpirvDebugTypeComposite>(spvContext.getDebugType(type));
+  SpirvDebugType *actualType = nullptr;
+  if (instr) {
+    auto *tempType = instr->getTypeTemplate();
+    if (tempType) {
+      auto &tempParams = tempType->getParams();
+      for (auto &t : tempParams) {
+        t->setActualType(dyn_cast<SpirvDebugType>(lowerToDebugType(t->getSpirvType())));
+      }
+    }
+  }
+  // TODO: else emit error!
   assert(instr && "StructType was not lowered by LowerTypeVisitor");
   if (instr->getFullyLowered())
     return instr;

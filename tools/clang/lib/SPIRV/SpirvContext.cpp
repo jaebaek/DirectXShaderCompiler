@@ -313,7 +313,7 @@ SpirvDebugInstruction *SpirvContext::getDebugTypeComposite(
 }
 
 SpirvDebugInstruction *
-SpirvContext::getDebugTypeComposite(const SpirvType *spirvType) {
+SpirvContext::getDebugType(const SpirvType *spirvType) {
   auto it = debugTypes.find(spirvType);
   if (it != debugTypes.end())
     return it->second;
@@ -362,29 +362,38 @@ SpirvContext::getDebugTypeFunction(const SpirvType *spirvType, uint32_t flags,
   return debugType;
 }
 
+// TODO: revisit this function
 SpirvDebugInstruction *
 SpirvContext::getDebugTypeTemplate(const SpirvType *spirvType,
                                    SpirvDebugInstruction *target) {
-  // Reuse existing debug type if possible.
-  if (debugTypes.find(spirvType) != debugTypes.end())
-    return debugTypes[spirvType];
-
-  auto *debugType = new (this) SpirvDebugTypeTemplate(target);
-  debugTypes[spirvType] = debugType;
-  return debugType;
+  // NOTE: Do not search it in debugTypes because we assume that
+  // only resource type e.g., RWStructuredBuffer<S> can be a DebugTypeTemplate
+  // and its DebugTypeComposite keeps this DebugTypeTemplate as a member.
+  auto it = debugTypes.find(spirvType);
+  if (it != debugTypes.end()) {
+    if (auto *composite = dyn_cast<SpirvDebugTypeComposite>(it->second)) {
+      auto *typeTemp = composite->getTypeTemplate();
+      if (typeTemp) {
+        return typeTemp;
+      } else {
+        auto *debugType = new (this) SpirvDebugTypeTemplate(target);
+        composite->setTypeTemplate(debugType);
+        return debugType;
+      }
+    }
+    // else we must emit an error!
+  }
+  return nullptr;
 }
 
 SpirvDebugInstruction *SpirvContext::getDebugTypeTemplateParameter(
-    const SpirvType *spirvType, llvm::StringRef name,
-    SpirvDebugType *actualType, SpirvConstant *value, SpirvDebugSource *source,
-    uint32_t line, uint32_t column) {
-  // Reuse existing debug type if possible.
-  if (debugTypes.find(spirvType) != debugTypes.end())
-    return debugTypes[spirvType];
+    llvm::StringRef name, const SpirvType *type, SpirvConstant *value,
+    SpirvDebugSource *source, uint32_t line, uint32_t column) {
+  // NOTE: Do not search it in debugTypes because DebugTypeTemplateParameter
+  // just represents a debug type that registers the same spirvType for itself.
 
-  auto *debugType = new (this) SpirvDebugTypeTemplateParameter(
-      name, actualType, value, source, line, column);
-  debugTypes[spirvType] = debugType;
+  auto *debugType = new (this)
+      SpirvDebugTypeTemplateParameter(name, type, value, source, line, column);
   return debugType;
 }
 

@@ -2264,6 +2264,67 @@ private:
   llvm::SmallVector<SpirvDebugType *, 4> paramTypes;
 };
 
+class SpirvDebugTypeTemplateParameter : public SpirvDebugType {
+public:
+  SpirvDebugTypeTemplateParameter(llvm::StringRef name, const SpirvType *type,
+                                  SpirvConstant *value,
+                                  SpirvDebugSource *source, uint32_t line,
+                                  uint32_t column);
+
+  static bool classof(const SpirvInstruction *inst) {
+    return inst->getKind() == IK_DebugTypeTemplateParameter;
+  }
+
+  bool invokeVisitor(Visitor *v) override;
+
+  SpirvDebugType *getActualType() const { return actualType; }
+  void setActualType(SpirvDebugType *ty) { actualType = ty; }
+  SpirvConstant *getValue() const { return value; }
+  SpirvDebugSource *getSource() const { return source; }
+  uint32_t getLine() const { return line; }
+  uint32_t getColumn() const { return column; }
+
+  const SpirvType *getSpirvType() const { return spvType; }
+
+private:
+  SpirvDebugType *actualType; //< Type for type param
+  SpirvConstant *value;       //< Value. It must be null for type.
+  SpirvDebugSource *source;   //< DebugSource containing this type
+  uint32_t line;              //< Line number
+  uint32_t column;            //< Column number
+
+  const SpirvType *spvType;
+};
+
+// Currently, the only use case of template type is a resource type.
+// If a composite type represents an opaque type for a resource, we
+// keep SpirvDebugTypeTemplate in SpirvDebugTypeComposite.
+class SpirvDebugTypeTemplate : public SpirvDebugType {
+public:
+  SpirvDebugTypeTemplate(SpirvDebugInstruction *target);
+
+  static bool classof(const SpirvInstruction *inst) {
+    return inst->getKind() == IK_DebugTypeTemplate;
+  }
+
+  bool invokeVisitor(Visitor *v) override;
+
+  llvm::SmallVector<SpirvDebugTypeTemplateParameter *, 2> &getParams() { return params; }
+  SpirvDebugInstruction *getTarget() const { return target; }
+
+private:
+  // A debug instruction representing class, struct or function which has
+  // template parameter(s).
+  SpirvDebugInstruction *target;
+
+  // Debug instructions representing the template parameters for this
+  // particular instantiation. It must be DebugTypeTemplateParameter
+  // or DebugTypeTemplateTemplateParameter.
+  // TODO: change the type to SpirvDebugType * when we support
+  // DebugTypeTemplateTemplateParameter.
+  llvm::SmallVector<SpirvDebugTypeTemplateParameter *, 2> params;
+};
+
 /// Represents the debug type of a struct/union/class member.
 /// Note: We have intentionally left out the pointer to the parent composite
 /// type.
@@ -2352,6 +2413,9 @@ public:
   void setSizeInBits(uint32_t size_) { size = size_; }
   uint32_t getSizeInBits() const override { return size; }
 
+  void setTypeTemplate(SpirvDebugTypeTemplate *t) { typeTemplate = t; }
+  SpirvDebugTypeTemplate * getTypeTemplate() const { return typeTemplate; }
+
   void setFullyLowered() { fullyLowered = true; }
   bool getFullyLowered() const { return fullyLowered; }
 
@@ -2382,62 +2446,14 @@ private:
   // vector of SpirvDebugType.
   llvm::SmallVector<SpirvDebugInstruction *, 4> members;
 
+  // When this composite type is an opaque type for a resource, it
+  // is a template type. typeTemplate keeps the template type info.
+  SpirvDebugTypeTemplate *typeTemplate;
+
   // It is first lowered by LowerTypeVisitor and then lowered by
   // DebugTypeVisitor. We set fullyLowered true after it is lowered
   // by DebugTypeVisitor.
   bool fullyLowered;
-};
-
-class SpirvDebugTypeTemplate : public SpirvDebugType {
-public:
-  SpirvDebugTypeTemplate(SpirvDebugInstruction *target);
-
-  static bool classof(const SpirvInstruction *inst) {
-    return inst->getKind() == IK_DebugTypeTemplate;
-  }
-
-  bool invokeVisitor(Visitor *v) override;
-
-  llvm::SmallVector<SpirvDebugInstruction *, 4> &getParams() { return params; }
-  SpirvDebugInstruction *getTarget() const { return target; }
-
-private:
-  // A debug instruction representing class, struct or function which has
-  // template parameter(s).
-  SpirvDebugInstruction *target;
-
-  // Debug instructions representing the template parameters for this
-  // particular instantiation. It must be DebugTypeTemplateParameter
-  // or DebugTypeTemplateTemplateParameter.
-  llvm::SmallVector<SpirvDebugInstruction *, 4> params;
-};
-
-class SpirvDebugTypeTemplateParameter : public SpirvDebugType {
-public:
-  SpirvDebugTypeTemplateParameter(llvm::StringRef name,
-                                  SpirvDebugType *actualType,
-                                  SpirvConstant *value,
-                                  SpirvDebugSource *source, uint32_t line,
-                                  uint32_t column);
-
-  static bool classof(const SpirvInstruction *inst) {
-    return inst->getKind() == IK_DebugTypeTemplateParameter;
-  }
-
-  bool invokeVisitor(Visitor *v) override;
-
-  SpirvDebugType *getActualType() const { return actualType; }
-  SpirvConstant *getValue() const { return value; }
-  SpirvDebugSource *getSource() const { return source; }
-  uint32_t getLine() const { return line; }
-  uint32_t getColumn() const { return column; }
-
-private:
-  SpirvDebugType *actualType; //< Type for type param
-  SpirvConstant *value;       //< Value. It must be null for type.
-  SpirvDebugSource *source;   //< DebugSource containing this type
-  uint32_t line;              //< Line number
-  uint32_t column;            //< Column number
 };
 
 #undef DECLARE_INVOKE_VISITOR_FOR_CLASS
