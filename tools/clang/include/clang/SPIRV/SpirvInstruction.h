@@ -2179,13 +2179,11 @@ public:
 
   bool invokeVisitor(Visitor *v) override;
 
-  llvm::StringRef getName() const { return name; }
   SpirvConstant *getSize() const { return size; }
   uint32_t getEncoding() const { return encoding; }
   uint32_t getSizeInBits() const override;
 
 private:
-  std::string name;
   SpirvConstant *size;
   // TODO: Replace uint32_t with enum from SPIRV-Headers once available.
   // 0, Unspecified
@@ -2363,8 +2361,6 @@ public:
 
   SpirvDebugInstruction *getParent() const override { return parent; }
 
-  llvm::StringRef getName() const { return name; }
-
   void setType(SpirvDebugType *type_) { type = type_; }
   SpirvDebugType *getType() const { return type; }
   SpirvDebugSource *getSource() const { return source; }
@@ -2378,7 +2374,6 @@ public:
   const SpirvType *getSpirvType() const { return spvType; }
 
 private:
-  std::string name;         //< Name of the member as it appears in the program
   SpirvDebugType *type;     //< The type of the current member
   SpirvDebugSource *source; //< DebugSource containing this type
   uint32_t line;            //< Line number
@@ -2417,12 +2412,11 @@ public:
     return members;
   }
   SpirvDebugInstruction *getParent() const override { return parent; }
-  llvm::StringRef getName() const { return name; }
   uint32_t getTag() const { return tag; }
   SpirvDebugSource *getSource() const { return source; }
   uint32_t getLine() const { return line; }
   uint32_t getColumn() const { return column; }
-  llvm::StringRef getLinkageName() const { return name; }
+  llvm::StringRef getLinkageName() const { return linkageName; }
   uint32_t getDebugFlags() const { return debugFlags; }
 
   void setSizeInBits(uint32_t size_) { size = size_; }
@@ -2435,7 +2429,6 @@ public:
   bool getFullyLowered() const { return fullyLowered; }
 
 private:
-  std::string name;         //< Name of the member as it appears in the program
   SpirvDebugSource *source; //< DebugSource containing this type
   uint32_t line;            //< Line number
   uint32_t column;          //< Column number
