@@ -206,8 +206,8 @@ public:
     return debugTypes;
   }
 
-  llvm::SmallVector<SpirvDebugInstruction *, 16> getMemberTypes() const {
-    return memberTypes;
+  llvm::SmallVector<SpirvDebugInstruction *, 16> getTailDebugTypes() const {
+    return tailDebugTypes;
   }
 
   // === Types ===
@@ -376,13 +376,13 @@ private:
   // type if the type is used for several variables.
   llvm::MapVector<const SpirvType *, SpirvDebugType *> debugTypes;
 
-  // Keep DebugTypeMember and DebugTypeInheritance.
-  // Since both DebugTypeMember and DebugTypeInheritance do not have
-  // corresponding SpirvType, we cannot keep them in debugTypes.
-  // No component reference DebugTypeMember and DebugTypeInheritance,
+  // Keep DebugTypeMember, DebugTypeInheritance, DebugTypeTemplate,
+  // and DebugTypeTemplateParameter.
+  // Since they do not have corresponding SpirvType, we cannot keep them
+  // in debugTypes. No component references them other than themselves,
   // there by being able to safely emit them at the end of other debug
   // extension instructions.
-  llvm::SmallVector<SpirvDebugInstruction *, 16> memberTypes;
+  llvm::SmallVector<SpirvDebugInstruction *, 16> tailDebugTypes;
 
   // Mapping from RecordDecl (struct or class or enum) to a vector of its member
   // function info.

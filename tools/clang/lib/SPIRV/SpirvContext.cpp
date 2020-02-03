@@ -292,9 +292,8 @@ SpirvDebugInstruction *SpirvContext::getDebugTypeMember(
 
   // NOTE: Do not save it in debugTypes because it would have the same
   // spirvType but it has different parent i.e., type composite. Instead,
-  // we want to keep DebugTypeMember and DebugTypeInheritance in
-  // memberTypes.
-  memberTypes.push_back(debugType);
+  // we want to keep it in tailDebugTypes.
+  tailDebugTypes.push_back(debugType);
   return debugType;
 }
 
@@ -378,6 +377,11 @@ SpirvContext::getDebugTypeTemplate(const SpirvType *spirvType,
       } else {
         auto *debugType = new (this) SpirvDebugTypeTemplate(target);
         composite->setTypeTemplate(debugType);
+
+        // NOTE: Do not save it in debugTypes because it is not
+        // corresponding to a spirvType but it is pointed by a composite
+        // type. Instead, we want to keep it in tailDebugTypes.
+        tailDebugTypes.push_back(debugType);
         return debugType;
       }
     }
@@ -394,6 +398,10 @@ SpirvDebugInstruction *SpirvContext::getDebugTypeTemplateParameter(
 
   auto *debugType = new (this)
       SpirvDebugTypeTemplateParameter(name, type, value, source, line, column);
+  // NOTE: Do not save it in debugTypes because it is not corresponding
+  // to a spirvType but it is pointed by a type template. Instead,
+  // we want to keep it in tailDebugTypes.
+  tailDebugTypes.push_back(debugType);
   return debugType;
 }
 
