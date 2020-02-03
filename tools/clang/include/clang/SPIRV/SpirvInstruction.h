@@ -2309,7 +2309,9 @@ public:
 
   bool invokeVisitor(Visitor *v) override;
 
-  llvm::SmallVector<SpirvDebugTypeTemplateParameter *, 2> &getParams() { return params; }
+  llvm::SmallVector<SpirvDebugTypeTemplateParameter *, 2> &getParams() {
+    return params;
+  }
   SpirvDebugInstruction *getTarget() const { return target; }
 
 private:
@@ -2414,7 +2416,7 @@ public:
   uint32_t getSizeInBits() const override { return size; }
 
   void setTypeTemplate(SpirvDebugTypeTemplate *t) { typeTemplate = t; }
-  SpirvDebugTypeTemplate * getTypeTemplate() const { return typeTemplate; }
+  SpirvDebugTypeTemplate *getTypeTemplate() const { return typeTemplate; }
 
   void setFullyLowered() { fullyLowered = true; }
   bool getFullyLowered() const { return fullyLowered; }

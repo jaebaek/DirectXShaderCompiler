@@ -918,8 +918,8 @@ SpirvDebugTypeTemplateParameter::SpirvDebugTypeTemplateParameter(
     llvm::StringRef name, const SpirvType *type, SpirvConstant *value_,
     SpirvDebugSource *source_, uint32_t line_, uint32_t column_)
     : SpirvDebugType(IK_DebugTypeTemplateParameter, /*opcode*/ 15u),
-      spvType(type), actualType(nullptr), value(value_), source(source_), line(line_),
-      column(column_) {
+      spvType(type), actualType(nullptr), value(value_), source(source_),
+      line(line_), column(column_) {
   debugName = name;
 }
 

@@ -421,7 +421,8 @@ const SpirvType *LowerTypeVisitor::lowerType(QualType type,
           auto *tempInfo =
               dyn_cast<SpirvDebugTypeTemplate>(spvContext.getDebugTypeTemplate(
                   spvTypeAndUnderlyingType.first, dbgType));
-          tempInfo->getParams().push_back(dyn_cast<SpirvDebugTypeTemplateParameter>(param));
+          tempInfo->getParams().push_back(
+              dyn_cast<SpirvDebugTypeTemplateParameter>(param));
         }
       }
       return spvTypeAndUnderlyingType.first;
