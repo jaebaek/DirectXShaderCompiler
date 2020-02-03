@@ -120,6 +120,7 @@ public:
     IK_RayTracingOpNV,            // NV raytracing ops
 
     // For DebugInfo instructions defined in OpenCL.DebugInfo.100
+    IK_DebugInfoNone,
     IK_DebugCompilationUnit,
     IK_DebugSource,
     IK_DebugFunction,
@@ -1828,6 +1829,17 @@ private:
   SpirvExtInstImport *instructionSet;
 };
 
+class SpirvDebugInfoNone : public SpirvDebugInstruction {
+public:
+  SpirvDebugInfoNone();
+
+  static bool classof(const SpirvInstruction *inst) {
+    return inst->getKind() == IK_DebugInfoNone;
+  }
+
+  bool invokeVisitor(Visitor *v) override;
+};
+
 class SpirvDebugSource : public SpirvDebugInstruction {
 public:
   SpirvDebugSource(llvm::StringRef file, llvm::StringRef text);
@@ -2267,7 +2279,7 @@ private:
 class SpirvDebugTypeTemplateParameter : public SpirvDebugType {
 public:
   SpirvDebugTypeTemplateParameter(llvm::StringRef name, const SpirvType *type,
-                                  SpirvConstant *value,
+                                  SpirvInstruction *value,
                                   SpirvDebugSource *source, uint32_t line,
                                   uint32_t column);
 
@@ -2279,7 +2291,8 @@ public:
 
   SpirvDebugType *getActualType() const { return actualType; }
   void setActualType(SpirvDebugType *ty) { actualType = ty; }
-  SpirvConstant *getValue() const { return value; }
+  void setValue(SpirvInstruction *c) { value = c; }
+  SpirvInstruction *getValue() const { return value; }
   SpirvDebugSource *getSource() const { return source; }
   uint32_t getLine() const { return line; }
   uint32_t getColumn() const { return column; }
@@ -2288,7 +2301,7 @@ public:
 
 private:
   SpirvDebugType *actualType; //< Type for type param
-  SpirvConstant *value;       //< Value. It must be null for type.
+  SpirvInstruction *value;    //< Value. It must be null for type.
   SpirvDebugSource *source;   //< DebugSource containing this type
   uint32_t line;              //< Line number
   uint32_t column;            //< Column number

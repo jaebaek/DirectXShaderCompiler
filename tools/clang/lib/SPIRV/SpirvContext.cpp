@@ -390,7 +390,7 @@ SpirvContext::getDebugTypeTemplate(const SpirvType *spirvType,
 }
 
 SpirvDebugInstruction *SpirvContext::getDebugTypeTemplateParameter(
-    llvm::StringRef name, const SpirvType *type, SpirvConstant *value,
+    llvm::StringRef name, const SpirvType *type, SpirvInstruction *value,
     SpirvDebugSource *source, uint32_t line, uint32_t column) {
   // NOTE: Do not search it in debugTypes because DebugTypeTemplateParameter
   // just represents a debug type that registers the same spirvType for itself.

@@ -824,6 +824,15 @@ SpirvDebugGlobalVariable *SpirvBuilder::createDebugGlobalVariable(
   return inst;
 }
 
+SpirvDebugInfoNone *SpirvBuilder::getOrCreateDebugInfoNone() {
+  if (debugNone)
+    return debugNone;
+
+  debugNone = new (context) SpirvDebugInfoNone();
+  module->addDebugInfo(debugNone);
+  return debugNone;
+}
+
 SpirvDebugExpression *SpirvBuilder::getOrCreateNullDebugExpression() {
   if (nullDebugExpr)
     return nullDebugExpr;

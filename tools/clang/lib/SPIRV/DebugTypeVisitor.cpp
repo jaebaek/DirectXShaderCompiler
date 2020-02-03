@@ -34,6 +34,8 @@ DebugTypeVisitor::lowerToDebugTypeComposite(const StructType *type) {
       for (auto &t : tempParams) {
         t->setActualType(
             dyn_cast<SpirvDebugType>(lowerToDebugType(t->getSpirvType())));
+        if (!t->getValue())
+          t->setValue(spvBuilder.getOrCreateDebugInfoNone());
       }
     }
   }
