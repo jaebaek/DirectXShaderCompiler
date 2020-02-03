@@ -2212,7 +2212,7 @@ public:
   bool invokeVisitor(Visitor *v) override;
 
   SpirvDebugType *getElementType() const { return elementType; }
-  llvm::ArrayRef<uint32_t> getElementCount() const { return elementCount; }
+  llvm::SmallVector<uint32_t, 2> &getElementCount() { return elementCount; }
 
   uint32_t getSizeInBits() const override {
     uint32_t nElem = elementType->getSizeInBits();
@@ -2223,7 +2223,7 @@ public:
 
 private:
   SpirvDebugType *elementType;
-  llvm::SmallVector<uint32_t, 4> elementCount;
+  llvm::SmallVector<uint32_t, 2> elementCount;
 };
 
 /// Represents vector debug types
