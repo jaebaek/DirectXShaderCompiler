@@ -1111,12 +1111,9 @@ void SpirvEmitter::doFunctionDecl(const FunctionDecl *decl) {
     info = getOrCreateRichDebugInfo(loc);
 
     auto *source = info->source;
-    // TODO: Revisit this. There are some cases that info->scopeStack.back()
-    // is not a parent scope of this function. Consider the case we suddenly
-    // handle a function decl (doFunctionDecl) when we meet a function call.
-    // The function call itself is not a place for this function definition.
-    // Therefore, its parent is not a parent scope of this function definition.
-    auto *parentScope = info->scopeStack.back();
+    // Note that info->scopeStack.back() is a lexical scope of the function
+    // caller.
+    auto *parentScope = info->compilationUnit;
     // TODO: figure out the proper flag based on the function decl.
     // using FlagIsPublic for now.
     uint32_t flags = 3u;
@@ -1129,10 +1126,9 @@ void SpirvEmitter::doFunctionDecl(const FunctionDecl *decl) {
     func->setDebugScope(new (astContext) SpirvDebugScope(debugFunction));
 
     // We want to keep member function info of a structure, but a StructType
-    // was not created yet. SpirvContext holds a map between RecordDecl and
-    // its member function list. When StructType will be created, it will
-    // keep its member function info. It will be used to create
-    // DebugTypeComposite in DebugTypeVisitor.
+    // was not created yet. SpirvContext holds a map between CXXMethodDecl and
+    // its corresponding DebugFunction. When StructType will be created, it
+    // will keep its member function info.
     if (const auto *methodDecl = dyn_cast<CXXMethodDecl>(decl)) {
       spvContext.saveFuntionInfo(methodDecl, debugFunction);
     }
