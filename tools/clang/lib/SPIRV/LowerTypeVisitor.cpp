@@ -998,9 +998,34 @@ SpirvDebugTypeComposite *LowerTypeVisitor::lowerDebugTypeComposite(
   for (auto &memberDecl : decl->decls()) {
     if (const auto *cxxMethodDecl = dyn_cast<CXXMethodDecl>(memberDecl)) {
       auto *fn = spvContext.findFunctionInfo(cxxMethodDecl);
-      assert(fn && "DebugFunction for method does not exist");
-      fn->setParent(dbgTyComposite);
-      members.push_back(fn);
+      if (fn) {
+        fn->setParent(dbgTyComposite);
+        members.push_back(fn);
+      } else {
+        auto *fnDecl =
+            new (spvContext) SpirvDebugFunctionDeclaration(cxxMethodDecl);
+
+        // Lower the function return type.
+        const SpirvType *spirvReturnType =
+            lowerType(cxxMethodDecl->getReturnType(), SpirvLayoutRule::Void,
+                      /*isRowMajor*/ llvm::None,
+                      /*SourceLocation*/ {});
+
+        // Lower the function parameter types.
+        llvm::SmallVector<const SpirvType *, 4> spirvParamTypes;
+        unsigned numParams = cxxMethodDecl->getNumParams();
+        for (unsigned i = 0; i < numParams; ++i) {
+          const auto *spirvParamType =
+              lowerType(cxxMethodDecl->getParamDecl(i)->getOriginalType(),
+                        SpirvLayoutRule::Void,
+                        /*isRowMajor*/ llvm::None, SourceLocation());
+          spirvParamTypes.push_back(spvContext.getPointerType(
+              spirvParamType, spv::StorageClass::Function));
+        }
+        fnDecl->setFunctionType(
+            spvContext.getFunctionType(spirvReturnType, spirvParamTypes, true));
+        members.push_back(fnDecl);
+      }
       continue;
     }
 

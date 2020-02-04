@@ -21,6 +21,9 @@
 #include "llvm/Support/Casting.h"
 
 namespace clang {
+
+class CXXMethodDecl;
+
 namespace spirv {
 
 class BoolType;
@@ -34,6 +37,7 @@ class SpirvString;
 class Visitor;
 class DebugTypeComposite;
 class SpirvDebugDeclare;
+class FunctionType;
 
 /// \brief The base class for representing SPIR-V instructions.
 class SpirvInstruction {
@@ -123,6 +127,7 @@ public:
     IK_DebugInfoNone,
     IK_DebugCompilationUnit,
     IK_DebugSource,
+    IK_DebugFunctionDecl,
     IK_DebugFunction,
     IK_DebugLocalVariable,
     IK_DebugGlobalVariable,
@@ -1879,6 +1884,72 @@ private:
   uint32_t dwarfVersion;
   SpirvDebugSource *source;
   spv::SourceLanguage lang;
+};
+
+class SpirvDebugFunctionDeclaration : public SpirvDebugInstruction {
+public:
+  SpirvDebugFunctionDeclaration(const CXXMethodDecl *decl_)
+      : SpirvDebugInstruction(IK_DebugFunctionDecl, /*opcode*/ 19u),
+        decl(decl_) {}
+
+  static bool classof(const SpirvInstruction *inst) {
+    return inst->getKind() == IK_DebugFunctionDecl;
+  }
+
+  bool invokeVisitor(Visitor *v) override;
+
+  void set(llvm::StringRef name_, SpirvDebugSource *src_, uint32_t fnLine_,
+           uint32_t fnColumn_, SpirvDebugInstruction *parentScope_,
+           llvm::StringRef linkageName_, uint32_t flags_) {
+    debugName = name_;
+    source = src_;
+    fnLine = fnLine_;
+    fnColumn = fnColumn_;
+    parentScope = parentScope_;
+    linkageName = linkageName_;
+    flags = flags_;
+  }
+
+  SpirvDebugSource *getSource() const { return source; }
+  uint32_t getLine() const { return fnLine; }
+  uint32_t getColumn() const { return fnColumn; }
+  void setParent(SpirvDebugInstruction *scope) { parentScope = scope; }
+  SpirvDebugInstruction *getParent() const override { return parentScope; }
+  llvm::StringRef getLinkageName() const { return linkageName; }
+  uint32_t getFlags() const { return flags; }
+
+  void setFunctionType(clang::spirv::FunctionType *t) { fnType = t; }
+  clang::spirv::FunctionType *getFunctionType() const { return fnType; }
+
+  void setDebugType(SpirvDebugInstruction *type) { debugType = type; }
+  SpirvDebugInstruction *getDebugType() const { return debugType; }
+
+  const CXXMethodDecl *getMethodDecl() const { return decl; }
+
+private:
+  SpirvDebugSource *source;
+  // Source line number at which the function appears
+  uint32_t fnLine;
+  // Source column number at which the function appears
+  uint32_t fnColumn;
+  // Debug instruction which represents the parent lexical scope
+  SpirvDebugInstruction *parentScope;
+  std::string linkageName;
+  // TODO: Replace this with an enum, when it is available in SPIRV-Headers
+  uint32_t flags;
+
+  // The constructor for SpirvDebugFunction sets the debug type to nullptr.
+  // A type lowering IMR pass will set debug types for all debug instructions
+  // that do contain a debug type.
+  SpirvDebugInstruction *debugType;
+
+  // When there is no function call for this function in SpirvEmitter,
+  // we must generate its rich debug info later when this function info
+  // is actually needed such as lowering composite debug type. In that
+  // case, we should keep its information until we generate the info.
+  const CXXMethodDecl *decl;
+
+  clang::spirv::FunctionType *fnType;
 };
 
 class SpirvDebugFunction : public SpirvDebugInstruction {

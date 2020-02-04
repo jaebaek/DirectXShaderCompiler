@@ -1,6 +1,25 @@
 // Run: %dxc -T ps_6_0 -E main -fspv-debug=rich
 
-struct foo {
+struct base {
+  int p0;
+
+  void f0(float arg) {
+    p0 = arg;
+  }
+
+  float4 p1;
+
+  int f1(int arg0, float arg1, bool arg2) {
+    p0 = arg0;
+    p1.y = arg1;
+    if (arg2) return arg0;
+    return p1.z;
+  }
+
+  bool p2;
+};
+
+struct foo : base {
   int a;
 
   void func0(float arg) {

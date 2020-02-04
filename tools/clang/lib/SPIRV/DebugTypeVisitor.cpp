@@ -25,6 +25,35 @@ void DebugTypeVisitor::setDefaultDebugInfo(SpirvDebugInstruction *instr) {
   instr->setInstructionSet(spvBuilder.getOpenCLDebugInfoExtInstSet());
 }
 
+void DebugTypeVisitor::generateFunctionInfo(SpirvDebugFunctionDeclaration *fn,
+                                            const CXXMethodDecl *decl) {
+  std::string classOrStructName = "";
+  if (const auto *st = dyn_cast<CXXRecordDecl>(decl->getDeclContext()))
+    classOrStructName = st->getName().str() + ".";
+
+  std::string funcName = classOrStructName + decl->getName().str();
+
+  const auto &sm = astContext.getSourceManager();
+  auto loc = decl->getLocStart();
+  const uint32_t line = sm.getPresumedLineNumber(loc);
+  const uint32_t column = sm.getPresumedColumnNumber(loc);
+
+  RichDebugInfo *debugInfo = &spvContext.getDebugInfo().begin()->second;
+  const char *file = sm.getPresumedLoc(loc).getFilename();
+  if (file)
+    debugInfo = &spvContext.getDebugInfo()[file];
+
+  auto *parent = fn->getParent();
+  if (!parent)
+    parent = debugInfo->compilationUnit;
+
+  // using FlagIsPublic for now.
+  uint32_t flags = 3u;
+  fn->set(funcName, debugInfo->source, line, column, parent, funcName, flags);
+  fn->setDebugType(lowerToDebugType(fn->getFunctionType()));
+  setDefaultDebugInfo(fn);
+}
+
 SpirvDebugInstruction *
 DebugTypeVisitor::lowerToDebugTypeComposite(const StructType *type) {
   // DebugTypeComposite is already lowered by LowerTypeVisitor,
@@ -60,8 +89,15 @@ DebugTypeVisitor::lowerToDebugTypeComposite(const StructType *type) {
   auto &members = instr->getMembers();
   for (auto *member : members) {
     auto *debugMember = dyn_cast<SpirvDebugTypeMember>(member);
-    if (!debugMember)
+    if (!debugMember) {
+      if (auto *fn = dyn_cast<SpirvDebugFunctionDeclaration>(member)) {
+        if (const auto *decl = fn->getMethodDecl()) {
+          generateFunctionInfo(fn, decl);
+        }
+        // TODO: else emit error!
+      }
       continue;
+    }
 
     SpirvDebugType *memberTy =
         dyn_cast<SpirvDebugType>(lowerToDebugType(debugMember->getSpirvType()));
@@ -279,6 +315,19 @@ bool DebugTypeVisitor::visit(SpirvModule *module, Phase phase) {
     // there could be duplicates.
     for (const auto typePair : spvContext.getDebugTypes()) {
       module->addDebugInfo(typePair.second);
+
+      // Add SpirvDebugFunctionDeclaration that is referenced only by a
+      // composite type.
+      if (auto *composite =
+              dyn_cast<SpirvDebugTypeComposite>(typePair.second)) {
+        auto &members = composite->getMembers();
+        for (auto *member : members) {
+          auto *fnDecl = dyn_cast<SpirvDebugFunctionDeclaration>(member);
+          if (!fnDecl)
+            continue;
+          module->addDebugInfo(fnDecl);
+        }
+      }
     }
     for (auto *type : spvContext.getTailDebugTypes()) {
       module->addDebugInfo(type);
