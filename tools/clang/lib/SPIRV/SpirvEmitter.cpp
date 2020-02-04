@@ -1130,7 +1130,7 @@ void SpirvEmitter::doFunctionDecl(const FunctionDecl *decl) {
     // its corresponding DebugFunction. When StructType will be created, it
     // will keep its member function info.
     if (const auto *methodDecl = dyn_cast<CXXMethodDecl>(decl)) {
-      spvContext.saveFuntionInfo(methodDecl, debugFunction);
+      spvContext.saveFunctionInfo(methodDecl, debugFunction);
     }
 
     info->scopeStack.push_back(debugFunction);

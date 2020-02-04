@@ -241,7 +241,7 @@ public:
       bool isReadOnly = false,
       StructInterfaceType interfaceType = StructInterfaceType::InternalStorage);
 
-  void saveFuntionInfo(const CXXMethodDecl *decl, SpirvDebugFunction *fn) {
+  void saveFunctionInfo(const CXXMethodDecl *decl, SpirvDebugFunction *fn) {
     structDeclToFnList[decl] = fn;
   }
   SpirvDebugFunction *findFunctionInfo(const CXXMethodDecl *decl) {
@@ -255,7 +255,8 @@ public:
                                          spv::StorageClass);
 
   FunctionType *getFunctionType(const SpirvType *ret,
-                                llvm::ArrayRef<const SpirvType *> param);
+                                llvm::ArrayRef<const SpirvType *> param,
+                                bool isMember = false);
 
   const StructType *getByteAddressBufferType(bool isWritable);
   const StructType *getACSBufferCounterType();
