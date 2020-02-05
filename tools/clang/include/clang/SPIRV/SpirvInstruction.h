@@ -1888,27 +1888,16 @@ private:
 
 class SpirvDebugFunctionDeclaration : public SpirvDebugInstruction {
 public:
-  SpirvDebugFunctionDeclaration(const CXXMethodDecl *decl_)
-      : SpirvDebugInstruction(IK_DebugFunctionDecl, /*opcode*/ 19u),
-        decl(decl_) {}
+  SpirvDebugFunctionDeclaration(llvm::StringRef name, SpirvDebugSource *src,
+                                uint32_t fnLine, uint32_t fnColumn,
+                                SpirvDebugInstruction *parentScope,
+                                llvm::StringRef linkageName, uint32_t flags);
 
   static bool classof(const SpirvInstruction *inst) {
     return inst->getKind() == IK_DebugFunctionDecl;
   }
 
   bool invokeVisitor(Visitor *v) override;
-
-  void set(llvm::StringRef name_, SpirvDebugSource *src_, uint32_t fnLine_,
-           uint32_t fnColumn_, SpirvDebugInstruction *parentScope_,
-           llvm::StringRef linkageName_, uint32_t flags_) {
-    debugName = name_;
-    source = src_;
-    fnLine = fnLine_;
-    fnColumn = fnColumn_;
-    parentScope = parentScope_;
-    linkageName = linkageName_;
-    flags = flags_;
-  }
 
   SpirvDebugSource *getSource() const { return source; }
   uint32_t getLine() const { return fnLine; }
@@ -1918,13 +1907,8 @@ public:
   llvm::StringRef getLinkageName() const { return linkageName; }
   uint32_t getFlags() const { return flags; }
 
-  void setFunctionType(clang::spirv::FunctionType *t) { fnType = t; }
-  clang::spirv::FunctionType *getFunctionType() const { return fnType; }
-
   void setDebugType(SpirvDebugInstruction *type) { debugType = type; }
   SpirvDebugInstruction *getDebugType() const { return debugType; }
-
-  const CXXMethodDecl *getMethodDecl() const { return decl; }
 
 private:
   SpirvDebugSource *source;
@@ -1942,14 +1926,6 @@ private:
   // A type lowering IMR pass will set debug types for all debug instructions
   // that do contain a debug type.
   SpirvDebugInstruction *debugType;
-
-  // When there is no function call for this function in SpirvEmitter,
-  // we must generate its rich debug info later when this function info
-  // is actually needed such as lowering composite debug type. In that
-  // case, we should keep its information until we generate the info.
-  const CXXMethodDecl *decl;
-
-  clang::spirv::FunctionType *fnType;
 };
 
 class SpirvDebugFunction : public SpirvDebugInstruction {
@@ -1959,6 +1935,25 @@ public:
                      SpirvDebugInstruction *parentScope,
                      llvm::StringRef linkageName, uint32_t flags,
                      uint32_t scopeLine, SpirvFunction *fn);
+
+  SpirvDebugFunction(const CXXMethodDecl *decl_)
+      : SpirvDebugInstruction(IK_DebugFunction, /*opcode*/ 20u), decl(decl_) {}
+
+  void set(llvm::StringRef name_, SpirvDebugSource *src_, uint32_t fnLine_,
+           uint32_t fnColumn_, SpirvDebugInstruction *parentScope_,
+           llvm::StringRef linkageName_, uint32_t flags_, uint32_t scopeLine_,
+           SpirvDebugInfoNone *none) {
+    debugName = name_;
+    source = src_;
+    fnLine = fnLine_;
+    fnColumn = fnColumn_;
+    parentScope = parentScope_;
+    linkageName = linkageName_;
+    flags = flags_;
+    scopeLine = scopeLine_;
+    fn = nullptr;
+    debugNone = none;
+  }
 
   static bool classof(const SpirvInstruction *inst) {
     return inst->getKind() == IK_DebugFunction;
@@ -1976,8 +1971,15 @@ public:
   uint32_t getScopeLine() const { return scopeLine; }
   SpirvFunction *getSpirvFunction() const { return fn; }
 
+  void setFunctionType(clang::spirv::FunctionType *t) { fnType = t; }
+  clang::spirv::FunctionType *getFunctionType() const { return fnType; }
+
+  SpirvDebugInfoNone *getDebugInfoNone() { return debugNone; }
+
   void setDebugType(SpirvDebugInstruction *type) { debugType = type; }
   SpirvDebugInstruction *getDebugType() const { return debugType; }
+
+  const CXXMethodDecl *getMethodDecl() const { return decl; }
 
 private:
   SpirvDebugSource *source;
@@ -1995,10 +1997,20 @@ private:
   // The function to which this debug instruction belongs
   SpirvFunction *fn;
 
+  SpirvDebugInfoNone *debugNone;
+
   // The constructor for SpirvDebugFunction sets the debug type to nullptr.
   // A type lowering IMR pass will set debug types for all debug instructions
   // that do contain a debug type.
   SpirvDebugInstruction *debugType;
+
+  // When there is no function call for this function in SpirvEmitter,
+  // we must generate its rich debug info later when this function info
+  // is actually needed such as lowering composite debug type. In that
+  // case, we should keep its information until we generate the info.
+  const CXXMethodDecl *decl;
+
+  clang::spirv::FunctionType *fnType;
 };
 
 class SpirvDebugLocalVariable : public SpirvDebugInstruction {

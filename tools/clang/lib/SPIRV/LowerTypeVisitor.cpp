@@ -1002,8 +1002,8 @@ SpirvDebugTypeComposite *LowerTypeVisitor::lowerDebugTypeComposite(
         fn->setParent(dbgTyComposite);
         members.push_back(fn);
       } else {
-        auto *fnDecl =
-            new (spvContext) SpirvDebugFunctionDeclaration(cxxMethodDecl);
+        SpirvDebugFunction *fn =
+            new (spvContext) SpirvDebugFunction(cxxMethodDecl);
 
         // Lower the function return type.
         const SpirvType *spirvReturnType =
@@ -1022,9 +1022,10 @@ SpirvDebugTypeComposite *LowerTypeVisitor::lowerDebugTypeComposite(
           spirvParamTypes.push_back(spvContext.getPointerType(
               spirvParamType, spv::StorageClass::Function));
         }
-        fnDecl->setFunctionType(
+        fn->setFunctionType(
             spvContext.getFunctionType(spirvReturnType, spirvParamTypes, true));
-        members.push_back(fnDecl);
+        fn->setParent(dbgTyComposite);
+        members.push_back(fn);
       }
       continue;
     }

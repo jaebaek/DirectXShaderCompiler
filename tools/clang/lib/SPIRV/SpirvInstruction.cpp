@@ -808,7 +808,17 @@ SpirvDebugFunction::SpirvDebugFunction(
     uint32_t bodyLine, SpirvFunction *func)
     : SpirvDebugInstruction(IK_DebugFunction, /*opcode*/ 20u), source(src),
       fnLine(fline), fnColumn(fcol), parentScope(parent), linkageName(linkName),
-      flags(flags_), scopeLine(bodyLine), fn(func), debugType(nullptr) {
+      flags(flags_), scopeLine(bodyLine), fn(func), debugNone(nullptr),
+      debugType(nullptr), decl(nullptr) {
+  debugName = name;
+}
+
+SpirvDebugFunctionDeclaration::SpirvDebugFunctionDeclaration(
+    llvm::StringRef name, SpirvDebugSource *src, uint32_t fline, uint32_t fcol,
+    SpirvDebugInstruction *parent, llvm::StringRef linkName, uint32_t flags_)
+    : SpirvDebugInstruction(IK_DebugFunctionDecl, /*opcode*/ 19u), source(src),
+      fnLine(fline), fnColumn(fcol), parentScope(parent), linkageName(linkName),
+      flags(flags_), debugType(nullptr) {
   debugName = name;
 }
 

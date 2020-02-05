@@ -25,7 +25,7 @@ void DebugTypeVisitor::setDefaultDebugInfo(SpirvDebugInstruction *instr) {
   instr->setInstructionSet(spvBuilder.getOpenCLDebugInfoExtInstSet());
 }
 
-void DebugTypeVisitor::generateFunctionInfo(SpirvDebugFunctionDeclaration *fn,
+void DebugTypeVisitor::generateFunctionInfo(SpirvDebugFunction *fn,
                                             const CXXMethodDecl *decl) {
   std::string classOrStructName = "";
   if (const auto *st = dyn_cast<CXXRecordDecl>(decl->getDeclContext()))
@@ -49,7 +49,11 @@ void DebugTypeVisitor::generateFunctionInfo(SpirvDebugFunctionDeclaration *fn,
 
   // using FlagIsPublic for now.
   uint32_t flags = 3u;
-  fn->set(funcName, debugInfo->source, line, column, parent, funcName, flags);
+  auto scopeLine = sm.getPresumedLineNumber(decl->getBody()->getLocStart());
+  auto *debugNone = spvBuilder.getOrCreateDebugInfoNone();
+  setDefaultDebugInfo(debugNone);
+  fn->set(funcName, debugInfo->source, line, column, parent, funcName, flags,
+          scopeLine, debugNone);
   fn->setDebugType(lowerToDebugType(fn->getFunctionType()));
   setDefaultDebugInfo(fn);
 }
@@ -90,12 +94,12 @@ DebugTypeVisitor::lowerToDebugTypeComposite(const StructType *type) {
   for (auto *member : members) {
     auto *debugMember = dyn_cast<SpirvDebugTypeMember>(member);
     if (!debugMember) {
-      if (auto *fn = dyn_cast<SpirvDebugFunctionDeclaration>(member)) {
+      if (auto *fn = dyn_cast<SpirvDebugFunction>(member)) {
         if (const auto *decl = fn->getMethodDecl()) {
           generateFunctionInfo(fn, decl);
         }
-        // TODO: else emit error!
       }
+      // TODO: else emit error!
       continue;
     }
 
@@ -322,10 +326,11 @@ bool DebugTypeVisitor::visit(SpirvModule *module, Phase phase) {
               dyn_cast<SpirvDebugTypeComposite>(typePair.second)) {
         auto &members = composite->getMembers();
         for (auto *member : members) {
-          auto *fnDecl = dyn_cast<SpirvDebugFunctionDeclaration>(member);
-          if (!fnDecl)
+          auto *fn = dyn_cast<SpirvDebugFunction>(member);
+          if (!fn)
             continue;
-          module->addDebugInfo(fnDecl);
+          if (fn->getMethodDecl())
+            module->addDebugInfo(fn);
         }
       }
     }
