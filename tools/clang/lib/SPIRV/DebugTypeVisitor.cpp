@@ -25,39 +25,6 @@ void DebugTypeVisitor::setDefaultDebugInfo(SpirvDebugInstruction *instr) {
   instr->setInstructionSet(spvBuilder.getOpenCLDebugInfoExtInstSet());
 }
 
-void DebugTypeVisitor::generateFunctionInfo(SpirvDebugFunction *fn,
-                                            const CXXMethodDecl *decl) {
-  std::string classOrStructName = "";
-  if (const auto *st = dyn_cast<CXXRecordDecl>(decl->getDeclContext()))
-    classOrStructName = st->getName().str() + ".";
-
-  std::string funcName = classOrStructName + decl->getName().str();
-
-  const auto &sm = astContext.getSourceManager();
-  auto loc = decl->getLocStart();
-  const uint32_t line = sm.getPresumedLineNumber(loc);
-  const uint32_t column = sm.getPresumedColumnNumber(loc);
-
-  RichDebugInfo *debugInfo = &spvContext.getDebugInfo().begin()->second;
-  const char *file = sm.getPresumedLoc(loc).getFilename();
-  if (file)
-    debugInfo = &spvContext.getDebugInfo()[file];
-
-  auto *parent = fn->getParent();
-  if (!parent)
-    parent = debugInfo->compilationUnit;
-
-  // using FlagIsPublic for now.
-  uint32_t flags = 3u;
-  auto scopeLine = sm.getPresumedLineNumber(decl->getBody()->getLocStart());
-  auto *debugNone = spvBuilder.getOrCreateDebugInfoNone();
-  setDefaultDebugInfo(debugNone);
-  fn->set(funcName, debugInfo->source, line, column, parent, funcName, flags,
-          scopeLine, debugNone);
-  fn->setDebugType(lowerToDebugType(fn->getFunctionType()));
-  setDefaultDebugInfo(fn);
-}
-
 SpirvDebugInstruction *
 DebugTypeVisitor::lowerToDebugTypeComposite(const StructType *type) {
   // DebugTypeComposite is already lowered by LowerTypeVisitor,
@@ -95,8 +62,14 @@ DebugTypeVisitor::lowerToDebugTypeComposite(const StructType *type) {
     auto *debugMember = dyn_cast<SpirvDebugTypeMember>(member);
     if (!debugMember) {
       if (auto *fn = dyn_cast<SpirvDebugFunction>(member)) {
-        if (const auto *decl = fn->getMethodDecl()) {
-          generateFunctionInfo(fn, decl);
+        if (const auto *fnType = fn->getFunctionType()) {
+          fn->setDebugType(lowerToDebugType(fnType));
+          setDefaultDebugInfo(fn);
+        }
+        if (!fn->getSpirvFunction()) {
+          auto *debugNone = spvBuilder.getOrCreateDebugInfoNone();
+          setDefaultDebugInfo(debugNone);
+          fn->setDebugInfoNone(debugNone);
         }
       }
       // TODO: else emit error!
@@ -329,7 +302,7 @@ bool DebugTypeVisitor::visit(SpirvModule *module, Phase phase) {
           auto *fn = dyn_cast<SpirvDebugFunction>(member);
           if (!fn)
             continue;
-          if (fn->getMethodDecl())
+          if (fn->getFunctionType())
             module->addDebugInfo(fn);
         }
       }

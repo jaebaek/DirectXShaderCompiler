@@ -809,7 +809,7 @@ SpirvDebugFunction::SpirvDebugFunction(
     : SpirvDebugInstruction(IK_DebugFunction, /*opcode*/ 20u), source(src),
       fnLine(fline), fnColumn(fcol), parentScope(parent), linkageName(linkName),
       flags(flags_), scopeLine(bodyLine), fn(func), debugNone(nullptr),
-      debugType(nullptr), decl(nullptr) {
+      debugType(nullptr), fnType(nullptr) {
   debugName = name;
 }
 
