@@ -563,8 +563,8 @@ SpirvEmitter::SpirvEmitter(CompilerInstance &ci)
       debugInfo[file] =
           RichDebugInfo(dbgSrc, spvBuilder.createDebugCompilationUnit(dbgSrc));
     }
-    spvBuilder.setCurrentLexicalScope(
-        debugInfo[fileNames[0]].scopeStack.back());
+    spvContext.pushDebugLexicalScope(&debugInfo[fileNames[0]],
+                                     debugInfo[fileNames[0]].scopeStack.back());
   }
 
   if (spirvOptions.debugInfoTool && spirvOptions.targetEnv == "vulkan1.1") {
@@ -782,8 +782,7 @@ void SpirvEmitter::doStmt(const Stmt *stmt,
           info->source, line, column, info->scopeStack.back());
 
       // Add this lexical block to the stack of lexical scopes.
-      info->scopeStack.push_back(debugLexicalBlock);
-      spvBuilder.setCurrentLexicalScope(info->scopeStack.back());
+      spvContext.pushDebugLexicalScope(info, debugLexicalBlock);
 
       // Iterate over sub-statements
       for (auto *st : compoundStmt->body())
@@ -791,8 +790,7 @@ void SpirvEmitter::doStmt(const Stmt *stmt,
 
       // We are done with processing this compound statement. Remove its lexical
       // block from the stack of lexical scopes.
-      info->scopeStack.pop_back();
-      spvBuilder.setCurrentLexicalScope(info->scopeStack.back());
+      spvContext.popDebugLexicalScope(info);
     } else {
       // Iterate over sub-statements
       for (auto *st : compoundStmt->body())
@@ -1133,8 +1131,7 @@ void SpirvEmitter::doFunctionDecl(const FunctionDecl *decl) {
       spvContext.saveFunctionInfo(methodDecl, debugFunction);
     }
 
-    info->scopeStack.push_back(debugFunction);
-    spvBuilder.setCurrentLexicalScope(info->scopeStack.back());
+    spvContext.pushDebugLexicalScope(info, debugFunction);
   }
 
   // TODO: If `decl->hasBody() == false`, add DebugFunctionDeclaration.
@@ -1185,8 +1182,7 @@ void SpirvEmitter::doFunctionDecl(const FunctionDecl *decl) {
   spvBuilder.endFunction();
 
   if (spirvOptions.debugInfoRich) {
-    info->scopeStack.pop_back();
-    spvBuilder.setCurrentLexicalScope(info->scopeStack.back());
+    spvContext.popDebugLexicalScope(info);
   }
 }
 

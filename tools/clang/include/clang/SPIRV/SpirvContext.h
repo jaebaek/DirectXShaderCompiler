@@ -314,6 +314,15 @@ public:
     return debugInfo;
   }
 
+  void pushDebugLexicalScope(RichDebugInfo *info, SpirvDebugInstruction *scope);
+  void popDebugLexicalScope(RichDebugInfo *info) {
+    info->scopeStack.pop_back();
+    currentLexicalScope = info->scopeStack.back();
+  }
+  SpirvDebugInstruction *getCurrentLexicalScope() {
+    return currentLexicalScope;
+  }
+
 private:
   /// \brief The allocator used to create SPIR-V entity objects.
   ///
@@ -370,6 +379,7 @@ private:
   /// DebugCompilationUnit and scopeStack which keeps lexical scopes
   /// recursively.
   llvm::MapVector<llvm::StringRef, RichDebugInfo> debugInfo;
+  SpirvDebugInstruction *currentLexicalScope;
 
   // Mapping from SPIR-V type to debug type instruction.
   // The purpose is not to generate several DebugType* instructions for the same

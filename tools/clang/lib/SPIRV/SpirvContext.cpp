@@ -19,7 +19,7 @@ SpirvContext::SpirvContext()
     : allocator(), voidType(nullptr), boolType(nullptr), sintTypes({}),
       uintTypes({}), floatTypes({}), samplerType(nullptr),
       curShaderModelKind(ShaderModelKind::Invalid), majorVersion(0),
-      minorVersion(0) {
+      minorVersion(0), currentLexicalScope(nullptr) {
   voidType = new (this) VoidType;
   boolType = new (this) BoolType;
   samplerType = new (this) SamplerType;
@@ -404,6 +404,17 @@ SpirvDebugInstruction *SpirvContext::getDebugTypeTemplateParameter(
   // we want to keep it in tailDebugTypes.
   tailDebugTypes.push_back(debugType);
   return debugType;
+}
+
+void SpirvContext::pushDebugLexicalScope(RichDebugInfo *info,
+                                         SpirvDebugInstruction *scope) {
+  assert((isa<SpirvDebugLexicalBlock>(scope) ||
+          isa<SpirvDebugFunction>(scope) ||
+          isa<SpirvDebugCompilationUnit>(scope) ||
+          isa<SpirvDebugTypeComposite>(scope)) &&
+         "Given scope is not a lexical scope");
+  currentLexicalScope = scope;
+  info->scopeStack.push_back(scope);
 }
 
 } // end namespace spirv
