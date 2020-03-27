@@ -16,6 +16,16 @@
 namespace clang {
 namespace spirv {
 
+void addTemplateTypeAndItsParamsToModule(SpirvModule* module, SpirvDebugTypeTemplate *tempType) {
+  assert(module && "module is nullptr");
+  assert(tempType && "tempType is nullptr");
+
+  for (auto * param : tempType->getParams()) {
+    module->addDebugInfo(param);
+  }
+  module->addDebugInfo(tempType);
+}
+
 void DebugTypeVisitor::setDefaultDebugInfo(SpirvDebugInstruction *instr) {
   instr->setAstResultType(astContext.VoidTy);
   instr->setResultType(context.getVoidType());
@@ -285,6 +295,11 @@ bool DebugTypeVisitor::visit(SpirvModule *module, Phase phase) {
     // Note that we don't add debug types to the module when we create them, as
     // there could be duplicates.
     for (const auto &typePair : spvContext.getDebugTypes()) {
+      if (auto *tempType = dyn_cast<SpirvDebugTypeTemplate>(typePair.second)) {
+        addTemplateTypeAndItsParamsToModule(module, tempType);
+        continue;
+      }
+
       module->addDebugInfo(typePair.second);
 
       // If SpirvDebugFunction is a member of this composite type and
@@ -293,6 +308,11 @@ bool DebugTypeVisitor::visit(SpirvModule *module, Phase phase) {
       // not yet added to debug info of the module. We must add it now.
       if (auto *composite =
               dyn_cast<SpirvDebugTypeComposite>(typePair.second)) {
+        if (auto *tempType = composite->getTypeTemplate()) {
+          addTemplateTypeAndItsParamsToModule(module, tempType);
+          continue;
+        }
+
         auto &members = composite->getMembers();
         for (auto *member : members) {
           auto *fn = dyn_cast<SpirvDebugFunction>(member);
