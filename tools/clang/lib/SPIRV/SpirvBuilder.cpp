@@ -92,8 +92,10 @@ SpirvBasicBlock *SpirvBuilder::createBasicBlock(llvm::StringRef name) {
   assert(function && "found detached basic block");
   auto *bb = new (context) SpirvBasicBlock(name);
   basicBlocks.push_back(bb);
-  if (auto *scope = context.getCurrentLexicalScope())
-    bb->setDebugScope(new (context) SpirvDebugScope(scope));
+  if (auto *scope = context.getCurrentLexicalScope()) {
+    if (!bb->getDebugScope())
+      bb->setDebugScope(new (context) SpirvDebugScope(scope));
+  }
   return bb;
 }
 
@@ -795,8 +797,14 @@ SpirvBuilder::createDebugLexicalBlock(SpirvDebugSource *source, uint32_t line,
       new (context) SpirvDebugLexicalBlock(source, line, column, parent);
   mod->addDebugInfo(inst);
   if (insertPoint->empty()) {
-    insertPoint->setDebugScope(new (context) SpirvDebugScope(inst));
+    if (!insertPoint->getDebugScope())
+      insertPoint->setDebugScope(new (context) SpirvDebugScope(inst));
   } else {
+    // Note that a SpirvBasicBlock can have multiple lexical blocks. For
+    // example, `void foo() { { { } } { } }` has 4 lexical blocks but
+    // generates only a single `OpLabel`. Since we want to add 4 DebugScope
+    // corresponding to those 4 lexical blocks, we use
+    // insertPoint->addInstruction() instead of setDebugScope() here.
     insertPoint->addInstruction(new (context) SpirvDebugScope(inst));
   }
   return inst;
