@@ -8,6 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "EmitVisitor.h"
+#include "dxc/Support/FileIOHelper.h"
+#include "dxc/Support/Global.h"
+#include "dxc/Support/HLSLOptions.h"
+#include "dxc/Support/dxcapi.use.h"
 #include "clang/SPIRV/BitwiseCast.h"
 #include "clang/SPIRV/SpirvBasicBlock.h"
 #include "clang/SPIRV/SpirvFunction.h"
@@ -77,6 +81,30 @@ bool isOpLineLegalForOp(spv::Op op) {
     return false;
   default:
     return true;
+  }
+}
+
+// Read the file in |filePath| and returns its contents as a string.
+// This function will be used by DebugSource to get its source code.
+std::string ReadSourceCode(llvm::StringRef filePath) {
+  try {
+    dxc::DxcDllSupport dllSupport;
+    IFT(dllSupport.Initialize());
+
+    CComPtr<IDxcLibrary> pLibrary;
+    IFT(dllSupport.CreateInstance(CLSID_DxcLibrary, &pLibrary));
+
+    CComPtr<IDxcBlobEncoding> pSource;
+    std::wstring srcFile(filePath.begin(), filePath.end());
+    IFT(pLibrary->CreateBlobFromFile(srcFile.c_str(), nullptr, &pSource));
+
+    CComPtr<IDxcBlobUtf8> utf8Source;
+    IFT(hlsl::DxcGetBlobAsUtf8(pSource, nullptr, &utf8Source));
+    return std::string(utf8Source->GetStringPointer(),
+                       utf8Source->GetStringLength());
+  } catch (...) {
+    // An exception has occured while reading the file
+    return "";
   }
 }
 
@@ -1084,7 +1112,10 @@ bool EmitVisitor::visit(SpirvDebugInfoNone *inst) {
 
 bool EmitVisitor::visit(SpirvDebugSource *inst) {
   uint32_t fileId = getOrCreateOpString(inst->getFile());
-  uint32_t textId = getOrCreateOpString(inst->getContent());
+  auto text = ReadSourceCode(inst->getFile());
+  uint32_t textId = 0;
+  if (!text.empty())
+    textId = getOrCreateOpString(text);
   initInstruction(inst);
   curInst.push_back(inst->getResultTypeId());
   curInst.push_back(getOrAssignResultId<SpirvInstruction>(inst));
