@@ -193,7 +193,7 @@ public:
                     &typeConstantBinary,
                     [this]() -> uint32_t { return takeNextId(); }),
         debugMainFileId(0), debugLine(0), debugColumn(0),
-        lastOpWasMergeInst(false) {}
+        lastOpWasMergeInst(false), inEntryFunctionWrapper(false) {}
 
   // Visit different SPIR-V constructs for emitting.
   bool visit(SpirvModule *, Phase phase);
@@ -379,6 +379,8 @@ private:
   uint32_t debugColumn;
   // True if the last emitted instruction was OpSelectionMerge or OpLoopMerge.
   bool lastOpWasMergeInst;
+  // True if currently it enters an entry function wrapper.
+  bool inEntryFunctionWrapper;
 };
 
 } // namespace spirv
