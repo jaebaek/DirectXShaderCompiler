@@ -2279,6 +2279,11 @@ TEST_F(FileTest, CompatibilityWithVk1p1) {
   runFileTest("sm6.wave.builtin.no-dup.vulkan1.2.hlsl");
 }
 
+TEST_F(FileTest, StructuredBufferCounterPointer) {
+  runFileTest("rich.debug.structured-buffer.hlsl", Expect::Success,
+              /*runValidation*/ true);
+}
+
 // Tests for Rich Debug Information
 // TODO: change |runValidation| parameter back to 'true' once the following bug
 // has been fixed in SPIRV-Tools:
