@@ -9,6 +9,7 @@
 #define LLVM_CLANG_SPIRV_EMITVISITOR_H
 
 #include "clang/SPIRV/SpirvContext.h"
+#include "clang/SPIRV/SpirvModule.h"
 #include "clang/SPIRV/SpirvVisitor.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
@@ -197,7 +198,7 @@ public:
                     [this]() -> uint32_t { return takeNextId(); }),
         debugMainFileId(0), debugLine(0), debugColumn(0),
         lastOpWasMergeInst(false), inEntryFunctionWrapper(false),
-        hlslVersion(0) {}
+        hlslVersion(0), debugSourceExists(false) {}
 
   // Visit different SPIR-V constructs for emitting.
   bool visit(SpirvModule *, Phase phase);
@@ -395,7 +396,10 @@ private:
   bool inEntryFunctionWrapper;
   // Set of files that we already dumped their source code in OpSource.
   llvm::DenseSet<uint32_t> dumpedFiles;
+  // HLSL version.
   uint32_t hlslVersion;
+  // True if the SPIR-V module has DebugSource instruction.
+  bool debugSourceExists;
 };
 
 } // namespace spirv
