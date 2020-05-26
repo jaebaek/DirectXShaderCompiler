@@ -339,9 +339,8 @@ void EmitVisitor::encodeString(llvm::StringRef value) {
   curInst.insert(curInst.end(), words.begin(), words.end());
 }
 
-bool EmitVisitor::visit(SpirvModule *mod, Phase phase) {
-  if (phase == Visitor::Phase::Init)
-    debugSourceExists = mod->hasDebugSource();
+bool EmitVisitor::visit(SpirvModule *, Phase) {
+  // No pre-visit operations needed for SpirvModule.
   return true;
 }
 
@@ -462,7 +461,8 @@ bool EmitVisitor::visit(SpirvString *inst) {
 }
 
 bool EmitVisitor::visit(SpirvSource *inst) {
-  // if (debugSourceExists) return true;
+  if (spvOptions.debugInfoRich)
+    return true;
 
   // Emit the OpString for the file name.
   uint32_t fileId = debugMainFileId;

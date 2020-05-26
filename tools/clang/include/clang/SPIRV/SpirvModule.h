@@ -127,10 +127,6 @@ public:
   // Adds the debug source to the module.
   void addSource(SpirvSource *);
 
-  // Clear sources if debugSources is not empty.
-  // void clearSourcesIfDebugSourceExist();
-  bool hasDebugSource();
-
   // Adds the given DebugInfoNone, DebugOperation, and DebugExpression
   // instruction to debugNone, debugOp, and debugExpr, respectively.
   void addDebugInfo(SpirvDebugInfoNone *none) { debugNone = none; }

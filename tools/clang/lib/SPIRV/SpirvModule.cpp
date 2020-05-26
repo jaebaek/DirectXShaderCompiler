@@ -459,8 +459,6 @@ void SpirvModule::addSource(SpirvSource *src) {
   sources.push_back(src);
 }
 
-bool SpirvModule::hasDebugSource() { return !debugSources.empty(); }
-
 void SpirvModule::addDebugInfo(SpirvDebugOperation *info) {
   assert(info);
   debugOp.push_back(info);
