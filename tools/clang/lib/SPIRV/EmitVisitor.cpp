@@ -461,6 +461,9 @@ bool EmitVisitor::visit(SpirvString *inst) {
 }
 
 bool EmitVisitor::visit(SpirvSource *inst) {
+  // We should either emit OpSource or DebugSource, not both.
+  // Therefore if rich debug info is being generated, we will skip
+  // emitting OpSource.
   if (spvOptions.debugInfoRich)
     return true;
 
