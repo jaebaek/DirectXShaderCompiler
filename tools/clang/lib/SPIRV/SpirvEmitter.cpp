@@ -655,6 +655,7 @@ void SpirvEmitter::HandleTranslationUnit(ASTContext &context) {
   // Output the constructed module.
   std::vector<uint32_t> m = spvBuilder.takeModule();
 
+  /*
   if (!spirvOptions.codeGenHighLevel) {
     // In order to flatten resource arrays, we must also unroll loops. Therefore
     // we should run legalization before optimization.
@@ -686,6 +687,22 @@ void SpirvEmitter::HandleTranslationUnit(ASTContext &context) {
                  {});
         return;
       }
+    }
+  }
+  */
+
+  if (!spirvOptions.codeGenHighLevel) {
+    spirvOptions.optConfig.clear();
+    spirvOptions.optConfig.push_back("--inline-entry-points-exhaustive");
+    spirvOptions.optConfig.push_back("--eliminate-dead-functions");
+    std::string messages;
+    if (!spirvToolsOptimize(targetEnv, &m, spirvOptions, &messages)) {
+      emitFatalError("failed to optimize SPIR-V: %0", {}) << messages;
+      emitNote("please file a bug report on "
+               "https://github.com/Microsoft/DirectXShaderCompiler/issues "
+               "with source code if possible",
+               {});
+      return;
     }
   }
 
