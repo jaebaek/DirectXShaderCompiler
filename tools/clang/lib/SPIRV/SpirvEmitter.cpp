@@ -7125,7 +7125,6 @@ SpirvEmitter::processIntrinsicCallExpr(const CallExpr *callExpr) {
   case hlsl::IntrinsicOp::IOP_tex1Dgrad:
   case hlsl::IntrinsicOp::IOP_tex1Dlod:
   case hlsl::IntrinsicOp::IOP_tex1Dproj:
-  case hlsl::IntrinsicOp::IOP_tex2D:
   case hlsl::IntrinsicOp::IOP_tex2Dbias:
   case hlsl::IntrinsicOp::IOP_tex2Dgrad:
   case hlsl::IntrinsicOp::IOP_tex2Dlod:
@@ -7144,6 +7143,9 @@ SpirvEmitter::processIntrinsicCallExpr(const CallExpr *callExpr) {
         << callee->getName();
     return nullptr;
   }
+  case hlsl::IntrinsicOp::IOP_tex2D:
+    retVal = processIntrinsicImageSampleLod(callExpr);
+    break;
   case hlsl::IntrinsicOp::IOP_dot:
     retVal = processIntrinsicDot(callExpr);
     break;
@@ -9023,6 +9025,25 @@ SpirvEmitter::processIntrinsicPrintf(const CallExpr *callExpr) {
 
   return spvBuilder.createNonSemanticDebugPrintfExtInst(
       returnType, NonSemanticDebugPrintfDebugPrintf, args, loc);
+}
+
+SpirvInstruction *
+SpirvEmitter::processIntrinsicImageSampleLod(const CallExpr *callExpr) {
+  assert((callExpr->getNumArgs() == 2 || callExpr->getNumArgs() == 4) &&
+         "tex2D must have 2 or 4 arguments");
+
+  auto *sampler = doExpr(callExpr->getArg(0));
+  auto *coordinate = doExpr(callExpr->getArg(1));
+  if (callExpr->getNumArgs() == 4) {
+    auto *ddx = doExpr(callExpr->getArg(2));
+    auto *ddy = doExpr(callExpr->getArg(3));
+    return spvBuilder.createImageSample(
+        callExpr->getCallReturnType(astContext), sampler, coordinate,
+        std::make_pair(ddx, ddy), callExpr->getCallee()->getLocStart());
+  }
+  return spvBuilder.createImageSample(
+      callExpr->getCallReturnType(astContext), sampler, coordinate,
+      std::make_pair(nullptr, nullptr), callExpr->getCallee()->getLocStart());
 }
 
 SpirvInstruction *SpirvEmitter::processIntrinsicDot(const CallExpr *callExpr) {

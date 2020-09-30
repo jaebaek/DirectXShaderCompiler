@@ -291,6 +291,11 @@ public:
                     SpirvInstruction *constOffsets, SpirvInstruction *sample,
                     SpirvInstruction *minLod, SpirvInstruction *residencyCodeId,
                     SourceLocation loc);
+  SpirvInstruction *
+  createImageSample(QualType texelType, SpirvInstruction *sampler,
+                    SpirvInstruction *coordinate,
+                    std::pair<SpirvInstruction *, SpirvInstruction *> grad,
+                    SourceLocation loc);
 
   /// \brief Creates SPIR-V instructions for reading a texel from an image. If
   /// doImageFetch is true, OpImageFetch is used. OpImageRead is used otherwise.

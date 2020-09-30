@@ -467,6 +467,9 @@ private:
   /// Processes the 'dot' intrinsic function.
   SpirvInstruction *processIntrinsicDot(const CallExpr *);
 
+  /// Processes the 'tex2D' intrinsic function.
+  SpirvInstruction *processIntrinsicImageSampleLod(const CallExpr *callExpr);
+
   /// Processes the 'log10' intrinsic function.
   SpirvInstruction *processIntrinsicLog10(const CallExpr *);
 

@@ -441,6 +441,27 @@ spv::ImageOperandsMask SpirvBuilder::composeImageOperandsMask(
 }
 
 SpirvInstruction *SpirvBuilder::createImageSample(
+    QualType texelType, SpirvInstruction *sampler, SpirvInstruction *coordinate,
+    std::pair<SpirvInstruction *, SpirvInstruction *> grad,
+    SourceLocation loc) {
+  assert(insertPoint && "null insert point");
+
+  SpirvInstruction *imageSampleInst = nullptr;
+  if (grad.first && grad.second) {
+    imageSampleInst = new (context)
+        SpirvImageOp(spv::Op::OpImageSampleExplicitLod, texelType, loc, sampler,
+                     coordinate, spv::ImageOperandsMask::Grad, nullptr, nullptr,
+                     nullptr, grad.first, grad.second);
+  } else {
+    imageSampleInst = new (context)
+        SpirvImageOp(spv::Op::OpImageSampleImplicitLod, texelType, loc, sampler,
+                     coordinate, spv::ImageOperandsMask::MaskNone);
+  }
+  insertPoint->addInstruction(imageSampleInst);
+  return imageSampleInst;
+}
+
+SpirvInstruction *SpirvBuilder::createImageSample(
     QualType texelType, QualType imageType, SpirvInstruction *image,
     SpirvInstruction *sampler, SpirvInstruction *coordinate,
     SpirvInstruction *compareVal, SpirvInstruction *bias, SpirvInstruction *lod,
