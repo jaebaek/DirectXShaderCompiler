@@ -437,8 +437,8 @@ private:
     /// Default constructor to satisfy DenseMap
     DeclSpirvInfo() : instr(nullptr), indexInCTBuffer(-1) {}
 
-    DeclSpirvInfo(SpirvInstruction *instr_, int index = -1)
-        : instr(instr_), indexInCTBuffer(index) {}
+    DeclSpirvInfo(SpirvBuilder &spvBuilder, SpirvInstruction *instr_, int index = -1)
+        : instr(spvBuilder.createCloneVarForFxcCTBuffer(instr_)), indexInCTBuffer(index) {}
 
     /// Implicit conversion to SpirvInstruction*.
     operator SpirvInstruction *() const { return instr; }
