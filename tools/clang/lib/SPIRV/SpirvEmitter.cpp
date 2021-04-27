@@ -1065,15 +1065,29 @@ void SpirvEmitter::doFunctionDecl(const FunctionDecl *decl) {
 
   SpirvFunction *func = declIdMapper.getOrRegisterFn(decl);
 
+  bool isEntryFunction = false;
   const auto iter = functionInfoMap.find(decl);
   if (iter != functionInfoMap.end()) {
     const auto &entryInfo = iter->second;
-    if (entryInfo->isEntryFunction) {
-      funcName = "src." + funcName;
-      // Create wrapper for the entry function
-      if (!emitEntryFunctionWrapper(decl, func))
-        return;
+    isEntryFunction = entryInfo->isEntryFunction;
+  }
+
+  if (isEntryFunction) {
+    funcName = "src." + funcName;
+    // Create wrapper for the entry function
+    if (!emitEntryFunctionWrapper(decl, func))
+      return;
+  }
+
+  // Set Z order test mode when the attribute is given only if it is an entry
+  // function.
+  if (const auto *zOrderTestAttr = decl->getAttr<VKZOrderTestAttr>()) {
+    if (!isEntryFunction) {
+      emitError("vk::z_order_test attribute can be used only for entry points",
+                zOrderTestAttr->getLocation());
+      return;
     }
+    spvContext.setZOrderTestMode(zOrderTestAttr->getZ_order());
   }
 
   const QualType retType =

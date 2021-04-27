@@ -1724,6 +1724,10 @@ TEST_F(FileTest, VulkanAttributeImageFormatO3) {
   runFileTest("vk.attribute.image-format.o3.hlsl");
 }
 
+TEST_F(FileTest, VulkanAttributeZOrderTestError) {
+  runFileTest("vk.attribute.z_order_test.error.hlsl", Expect::Failure);
+}
+
 TEST_F(FileTest, VulkanCLOptionInvertYVS) {
   runFileTest("vk.cloption.invert-y.vs.hlsl");
 }

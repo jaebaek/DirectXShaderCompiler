@@ -11941,6 +11941,13 @@ void hlsl::HandleDeclAttributeForHLSL(Sema &S, Decl *D, const AttributeList &A, 
   case AttributeList::AT_VKShaderRecordEXT:
     declAttr = ::new (S.Context) VKShaderRecordEXTAttr(A.getRange(), S.Context, A.getAttributeSpellingListIndex());
     break;
+  case AttributeList::AT_VKZOrderTest:
+    declAttr = ::new (S.Context) VKZOrderTestAttr(
+        A.getRange(), S.Context,
+        ValidateAttributeStringArg(
+            S, A, "LATE_Z,RE_Z,EARLY_Z_THEN_LATE_Z,EARLY_Z_THEN_RE_Z"),
+        A.getAttributeSpellingListIndex());
+    break;
   default:
     Handled = false;
     return;
@@ -13347,6 +13354,7 @@ bool hlsl::IsHLSLAttr(clang::attr::Kind AttrKind) {
   case clang::attr::VKPushConstant:
   case clang::attr::VKShaderRecordNV:
   case clang::attr::VKShaderRecordEXT:
+  case clang::attr::VKZOrderTest:
     return true;
   default:
     // Only HLSL/VK Attributes return true. Only used for printPretty(), which doesn't support them.

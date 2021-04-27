@@ -1100,6 +1100,14 @@ def VKShaderRecordEXT : InheritableAttr {
   let LangOpts = [SPIRV];
   let Documentation = [Undocumented];
 }
+
+def VKZOrderTest : InheritableAttr {
+  let Spellings = [CXX11<"vk", "z_order_test">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Args = [StringArgument<"z_order">];
+  let LangOpts = [SPIRV];
+  let Documentation = [Undocumented];
+}
 // SPIRV Change Ends
 
 def C11NoReturn : InheritableAttr {

@@ -374,6 +374,10 @@ public:
     return declToDebugFunction[decl];
   }
 
+  /// Setter/Getter of zOrderTestMode
+  void setZOrderTestMode(llvm::StringRef mode) { zOrderTestMode = mode; }
+  llvm::StringRef getZOrderTestMode() { return zOrderTestMode; }
+
 private:
   /// \brief The allocator used to create SPIR-V entity objects.
   ///
@@ -463,6 +467,9 @@ private:
 
   // Mapping from SPIR-V OpVariable to SPIR-V image format.
   llvm::DenseMap<const SpirvVariable *, spv::ImageFormat> spvVarToImageFormat;
+
+  // Value of vk::z_order_test attribute.
+  llvm::StringRef zOrderTestMode;
 };
 
 } // end namespace spirv
