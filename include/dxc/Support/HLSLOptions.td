@@ -285,6 +285,8 @@ def disable_lifetime_markers : Flag<["-", "/"], "disable-lifetime-markers">, Gro
   HelpText<"Disable generation of lifetime markers where they would be otherwise (6.6+)">;
 def enable_templates: Flag<["-", "/"], "enable-templates">, Group<hlslcomp_Group>, Flags<[CoreOption]>,
   HelpText<"Enable template support for HLSL.">;
+def enable_operator_overloading: Flag<["-", "/"], "enable-operator-overloading">, Group<hlslcomp_Group>, Flags<[CoreOption]>,
+  HelpText<"Enable operator overloading support for HLSL.">;
 def enable_payload_qualifiers : Flag<["-", "/"], "enable-payload-qualifiers">, Group<hlslcomp_Group>, Flags<[CoreOption, RewriteOption, DriverOption]>,
   HelpText<"Enables support for payload access qualifiers for raytracing payloads in SM 6.6.">;
 def disable_payload_qualifiers : Flag<["-", "/"], "disable-payload-qualifiers">, Group<hlslcomp_Group>, Flags<[CoreOption, RewriteOption, DriverOption]>,
